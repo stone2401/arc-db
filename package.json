@@ -16,26 +16,138 @@
       {
         "command": "arc-db.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "arc-db.addConnection",
+        "title": "Add Database Connection",
+        "icon": "$(add)"
+      },
+      {
+        "command": "arc-db.refreshConnections",
+        "title": "Refresh Connections",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "arc-db.executeQuery",
+        "title": "Execute SQL Query"
+      },
+      {
+        "command": "arc-db.viewTable",
+        "title": "View Table Data"
+      },
+      {
+        "command": "arc-db.editConnection",
+        "title": "Edit Connection"
+      },
+      {
+        "command": "arc-db.deleteConnection",
+        "title": "Delete Connection"
+      },
+      {
+        "command": "arc-db.newQuery",
+        "title": "New Query"
+      },
+      {
+        "command": "arc-db.exportData",
+        "title": "Export Data"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "arc-db-explorer",
+          "title": "Database Explorer",
+          "icon": "resources/database.svg"
+        }
+      ]
+    },
+    "views": {
+      "arc-db-explorer": [
+        {
+          "id": "arcDbConnectionsView",
+          "name": "Database Connections"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "arcDbConnectionsView",
+        "contents": "No database connections found. [Add Connection](command:arc-db.addConnection)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "arc-db.addConnection",
+          "when": "view == arcDbConnectionsView",
+          "group": "navigation"
+        },
+        {
+          "command": "arc-db.refreshConnections",
+          "when": "view == arcDbConnectionsView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "arc-db.editConnection",
+          "when": "view == arcDbConnectionsView && viewItem == connection",
+          "group": "1_connection"
+        },
+        {
+          "command": "arc-db.deleteConnection",
+          "when": "view == arcDbConnectionsView && viewItem == connection",
+          "group": "1_connection"
+        },
+        {
+          "command": "arc-db.newQuery",
+          "when": "view == arcDbConnectionsView && viewItem == connection",
+          "group": "2_query"
+        },
+        {
+          "command": "arc-db.viewTable",
+          "when": "view == arcDbConnectionsView && viewItem == table",
+          "group": "1_tableActions"
+        },
+        {
+          "command": "arc-db.exportData",
+          "when": "view == arcDbConnectionsView && viewItem == table",
+          "group": "1_tableActions"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "arc-db.executeQuery",
+          "when": "editorLangId == sql",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "pnpm run compile && pnpm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.98.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.28.0",
-    "@typescript-eslint/parser": "^8.28.0",
-    "eslint": "^9.23.0",
-    "typescript": "^5.8.2",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@types/node": "18.x",
+    "@types/vscode": "^1.87.0",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.3.9",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.3"
+  },
+  "dependencies": {
+    "mssql": "^10.0.2",
+    "mysql2": "^3.9.2",
+    "pg": "^8.11.3",
+    "sqlite3": "^5.1.7",
+    "uuid": "^9.0.1"
   }
 }
