@@ -4,7 +4,7 @@
   "description": "A lightweight database IDE for VS Code similar to DataGrip and Navicat",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
@@ -150,6 +150,11 @@
     "pg": "^8.11.3",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
-    "uuid": "^9.0.1"
-  }
+    "uuid": "^10.0.0"
+  },
+  "files": [
+    "out/**/*",
+    "src/webview/**/*",
+    "resources/**/*"
+  ]
 }
