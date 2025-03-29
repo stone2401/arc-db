@@ -3,7 +3,7 @@ import { DatabaseConnection } from '../models/connection';
 import { QueryResult, DatabaseMetadata, TableStructure } from './databaseService';
 import { IDatabaseService } from './IDatabaseService';
 
-export class PostgreSqlDatabaseService implements IDatabaseService {
+export class PostgreSqlDatabaseService implements IDatabaseService<any> {
   
   public async connect(connection: DatabaseConnection): Promise<any> {
     try {
@@ -71,10 +71,10 @@ export class PostgreSqlDatabaseService implements IDatabaseService {
       for (const database of databases) {
         // Create a new connection for each database
         const dbConn = new pg.Pool({
-          host: connection.options.host,
-          port: connection.options.port,
-          user: connection.options.user,
-          password: connection.options.password,
+          host: (connection as any).options?.host || (connection as any)._clients?.[0]?._host || 'localhost',
+          port: (connection as any).options?.port || (connection as any)._clients?.[0]?._port || 5432,
+          user: (connection as any).options?.user || (connection as any)._clients?.[0]?._user || 'postgres',
+          password: (connection as any).options?.password || (connection as any)._clients?.[0]?._password || '',
           database: database,
           connectionTimeoutMillis: 10000
         });
@@ -119,12 +119,16 @@ export class PostgreSqlDatabaseService implements IDatabaseService {
       let dbConn = connection;
       let shouldCloseConnection = false;
       
-      if (connection.options.database !== database) {
+      const currentDatabase = (connection as any).options?.database || 
+                             (connection as any)._clients?.[0]?._database || 
+                             '';
+      
+      if (currentDatabase !== database) {
         dbConn = new pg.Pool({
-          host: connection.options.host,
-          port: connection.options.port,
-          user: connection.options.user,
-          password: connection.options.password,
+          host: (connection as any).options?.host || (connection as any)._clients?.[0]?._host || 'localhost',
+          port: (connection as any).options?.port || (connection as any)._clients?.[0]?._port || 5432,
+          user: (connection as any).options?.user || (connection as any)._clients?.[0]?._user || 'postgres',
+          password: (connection as any).options?.password || (connection as any)._clients?.[0]?._password || '',
           database: database,
           connectionTimeoutMillis: 10000
         });

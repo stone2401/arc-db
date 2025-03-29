@@ -9,24 +9,24 @@ export class ConnectionFormProvider {
   private static instance: ConnectionFormProvider;
   private panel: vscode.WebviewPanel | undefined;
   private context: vscode.ExtensionContext;
-  
+
   private constructor(context: vscode.ExtensionContext) {
     this.context = context;
   }
-  
+
   public static getInstance(context?: vscode.ExtensionContext): ConnectionFormProvider {
     if (!ConnectionFormProvider.instance && context) {
       ConnectionFormProvider.instance = new ConnectionFormProvider(context);
     }
     return ConnectionFormProvider.instance;
   }
-  
+
   public showConnectionForm(connection?: DatabaseConnection): void {
     const isEditMode = !!connection;
     const columnToShowIn = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
-    
+
     if (this.panel) {
       this.panel.reveal(columnToShowIn);
     } else {
@@ -41,14 +41,14 @@ export class ConnectionFormProvider {
           ]
         }
       );
-      
+
       this.panel.onDidDispose(() => {
         this.panel = undefined;
       }, null, this.context.subscriptions);
-      
+
       // Set webview content
       this.panel.webview.html = this.getWebviewContent(connection);
-      
+
       // Handle messages from the webview
       this.panel.webview.onDidReceiveMessage(async (message) => {
         if (message.command === 'saveConnection') {
@@ -69,14 +69,14 @@ export class ConnectionFormProvider {
           const databaseService = DatabaseService.getInstance();
           try {
             const result = await databaseService.testConnection(message.connection);
-            this.panel?.webview.postMessage({ 
-              command: 'testConnectionResult', 
+            this.panel?.webview.postMessage({
+              command: 'testConnectionResult',
               success: result,
               message: result ? 'Connection successful!' : 'Connection failed.'
             });
           } catch (error) {
-            this.panel?.webview.postMessage({ 
-              command: 'testConnectionResult', 
+            this.panel?.webview.postMessage({
+              command: 'testConnectionResult',
               success: false,
               message: `Connection failed: ${error}`
             });
@@ -87,12 +87,12 @@ export class ConnectionFormProvider {
       });
     }
   }
-  
+
   private getWebviewContent(connection?: DatabaseConnection): string {
     const styleUri = this.panel?.webview.asWebviewUri(
-      vscode.Uri.file(path.join(this.context.extensionPath, 'src', 'webview', 'connectionForm', 'styles.css'))
+      vscode.Uri.file(path.join(this.context.extensionPath, 'src', 'views', 'styles.css'))
     );
-    
+
     const initialConnection = connection || {
       name: '',
       type: DatabaseType.MySQL,
@@ -102,7 +102,7 @@ export class ConnectionFormProvider {
       password: '',
       database: ''
     };
-    
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -190,7 +190,7 @@ export class ConnectionFormProvider {
                 <label for="type">Database Type</label>
                 <select id="type" name="type">
                     <option value="mysql">MySQL</option>
-                    <option value="postgres">PostgreSQL</option>
+                    <option value="postgresql">PostgreSQL</option>
                     <option value="mssql">SQL Server</option>
                     <option value="sqlite">SQLite</option>
                 </select>
@@ -313,7 +313,7 @@ export class ConnectionFormProvider {
                 };
                 
                 if (type === 'sqlite') {
-                    data.file = document.getElementById('file').value;
+                    data.filename = document.getElementById('file').value;
                 } else {
                     data.host = document.getElementById('host').value;
                     data.port = parseInt(document.getElementById('port').value, 10);
@@ -375,7 +375,7 @@ export class ConnectionFormProvider {
     </body>
     </html>`;
   }
-  
+
   private getDefaultPort(type: DatabaseType): number {
     switch (type) {
       case DatabaseType.MySQL:

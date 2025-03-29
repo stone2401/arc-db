@@ -144,9 +144,11 @@
     "typescript": "^5.4.3"
   },
   "dependencies": {
+    "@types/uuid": "^10.0.0",
     "mssql": "^10.0.2",
     "mysql2": "^3.9.2",
     "pg": "^8.11.3",
+    "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "uuid": "^9.0.1"
   }

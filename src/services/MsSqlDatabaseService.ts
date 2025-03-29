@@ -3,7 +3,7 @@ import { DatabaseConnection } from '../models/connection';
 import { QueryResult, DatabaseMetadata, TableStructure } from './databaseService';
 import { IDatabaseService } from './IDatabaseService';
 
-export class MsSqlDatabaseService implements IDatabaseService {
+export class MsSqlDatabaseService implements IDatabaseService<any> {
   
   public async connect(connection: DatabaseConnection): Promise<any> {
     try {

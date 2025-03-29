@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { DatabaseConnection, DatabaseType } from '../models/connection';
 import { DatabaseServiceFactory } from './DatabaseServiceFactory';
+import { Logger } from './Logger';
 
 export interface QueryResult {
   columns: string[];
@@ -45,6 +46,14 @@ export class DatabaseService {
 
   public async connect(connection: DatabaseConnection): Promise<boolean> {
     try {
+      // Log the connection attempt
+      Logger.logOperation(
+        connection.name,
+        connection.type,
+        'Connecting to database',
+        `Host: ${connection.host || 'localhost'}, Database: ${connection.database || 'N/A'}`
+      );
+
       // Close existing connection if it exists
       if (this.connections.has(connection.id)) {
         await this.disconnect(connection.id);
@@ -63,9 +72,14 @@ export class DatabaseService {
         name: connection.name
       });
 
+      // Log successful connection
+      Logger.logResult(`Connection successful: ${connection.name}\n`);
+
       return true;
     } catch (error) {
       console.error('Connection error:', error);
+      // Log the error
+      Logger.logError('connecting', error);
       vscode.window.showErrorMessage(`Failed to connect to ${connection.name}: ${error}`);
       return false;
     }
@@ -78,6 +92,9 @@ export class DatabaseService {
         return false;
       }
 
+      // Log the disconnection attempt
+      Logger.logOperation(conn.name, conn.type, 'Disconnecting from database');
+
       // Get the appropriate database service
       const service = this.factory.getService(conn.type);
 
@@ -85,9 +102,15 @@ export class DatabaseService {
       await service.disconnect(conn.connection);
 
       this.connections.delete(connectionId);
+
+      // Log successful disconnection
+      Logger.logResult(`Disconnection successful: ${conn.name}\n`);
+
       return true;
     } catch (error) {
       console.error('Disconnection error:', error);
+      // Log the error
+      Logger.logError('disconnecting', error);
       return false;
     }
   }
@@ -124,13 +147,23 @@ export class DatabaseService {
         throw new Error(`Connection not found: ${connectionId}`);
       }
 
+      // Log the SQL query with connection info
+      Logger.logQuery(conn.name, conn.type, sql);
+
       // Get the appropriate database service
       const service = this.factory.getService(conn.type);
 
       // Execute the query
-      return await service.executeQuery(conn.connection, sql);
+      const result = await service.executeQuery(conn.connection, sql);
+
+      // Log the result summary
+      Logger.logResult(`${result.rowCount} rows affected in ${result.executionTime}ms\n`);
+
+      return result;
     } catch (error) {
       console.error('Query execution error:', error);
+      // Log the error
+      Logger.logError('executing query', error);
       throw error;
     }
   }
@@ -142,13 +175,30 @@ export class DatabaseService {
         throw new Error(`Connection not found: ${connectionId}`);
       }
 
+      // Log the metadata retrieval operation
+      Logger.logOperation(conn.name, conn.type, 'Retrieving database metadata');
+
       // Get the appropriate database service
       const service = this.factory.getService(conn.type);
 
       // Get the database metadata
-      return await service.getDatabaseMetadata(conn.connection);
+      const metadata = await service.getDatabaseMetadata(conn.connection);
+
+      // Log the metadata summary
+      Logger.logResult(`Found ${metadata.databases.length} databases`);
+      metadata.databases.forEach(db => {
+        const tableCount = metadata.tables[db]?.length || 0;
+        const viewCount = metadata.views[db]?.length || 0;
+        const procCount = metadata.procedures[db]?.length || 0;
+        Logger.logResult(`  - ${db}: ${tableCount} tables, ${viewCount} views, ${procCount} procedures`);
+      });
+      Logger.logResult('');
+
+      return metadata;
     } catch (error) {
       console.error('Metadata retrieval error:', error);
+      // Log the error
+      Logger.logError('retrieving metadata', error);
       throw error;
     }
   }
@@ -160,13 +210,26 @@ export class DatabaseService {
         throw new Error(`Connection not found: ${connectionId}`);
       }
 
+      // Log the table structure retrieval operation
+      Logger.logOperation(conn.name, conn.type, `Retrieving structure for table ${database}.${table}`);
+
       // Get the appropriate database service
       const service = this.factory.getService(conn.type);
 
       // Get the table structure
-      return await service.getTableStructure(conn.connection, database, table);
+      const structure = await service.getTableStructure(conn.connection, database, table);
+
+      // Log the structure summary
+      Logger.logResult(`Table ${structure.name} has ${structure.columns.length} columns`);
+      Logger.logDetailedResults(structure.columns, col =>
+        `${col.name} (${col.type})${col.primaryKey ? ' PRIMARY KEY' : ''}${col.nullable ? '' : ' NOT NULL'}`
+      );
+
+      return structure;
     } catch (error) {
       console.error('Table structure retrieval error:', error);
+      // Log the error
+      Logger.logError('retrieving table structure', error);
       throw error;
     }
   }
