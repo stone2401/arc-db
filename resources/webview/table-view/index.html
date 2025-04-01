@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; img-src {{cspSource}} https:; script-src {{cspSource}} 'unsafe-inline'; style-src {{cspSource}} 'unsafe-inline';">
+    <title>{{tableName}} - Data</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .title {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        .button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid var(--vscode-panel-border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            position: sticky;
+            top: 0;
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        th:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        td {
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 5px;
+        }
+
+        .sort-icon::after {
+            content: '';
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        .sort-asc::after {
+            content: '↑';
+        }
+
+        .sort-desc::after {
+            content: '↓';
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">{{connectionName}} > {{tableName}}</div>
+            <div class="actions">
+                <button class="button" id="refresh">Refresh</button>
+                <button class="button" id="export">Export</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="data-table">
+                <thead id="table-header">
+                    <!-- Table headers will be inserted here by JavaScript -->
+                </thead>
+                <tbody id="table-body">
+                    <!-- Table rows will be inserted here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <div class="footer">
+            <div>Total: <span id="row-count">{{rowCount}}</span> rows</div>
+            <div class="pagination">
+                <button class="button" id="prev">Previous</button>
+                <button class="button" id="next">Next</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Initialize with data from VS Code
+        const vscode = acquireVsCodeApi();
+        const initialData = TEMPLATE_INITIAL_DATA;
+        console.log('initialData', initialData);
+        
+        // Store state in webview
+        let state = {
+            columns: initialData.columns,
+            data: initialData.data,
+            tableName: initialData.tableName,
+            connectionName: initialData.connectionName,
+            currentPage: 1,
+            pageSize: 100,
+            sortColumn: null,
+            sortDirection: 'asc'
+        };
+
+        // Function to render the table
+        function renderTable() {
+            // Render table headers
+            const headerRow = document.getElementById('table-header');
+            headerRow.innerHTML = '';
+            const tr = document.createElement('tr');
+            
+            state.columns.forEach(column => {
+                const th = document.createElement('th');
+                th.textContent = column;
+                if (state.sortColumn === column) {
+                    th.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+                tr.appendChild(th);
+            });
+            
+            headerRow.appendChild(tr);
+            
+            // Render table rows
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+            
+            state.data.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                state.columns.forEach(column => {
+                    const td = document.createElement('td');
+                    td.textContent = row[column] !== null ? row[column] : 'NULL';
+                    tr.appendChild(td);
+                });
+                
+                tableBody.appendChild(tr);
+            });
+            
+            // Update row count
+            document.getElementById('row-count').textContent = state.data.length;
+        }
+        
+        // Initial render
+        renderTable();
+
+        // Event listeners
+        document.getElementById('refresh').addEventListener('click', () => {
+            vscode.postMessage({ command: 'refresh' });
+        });
+
+        document.getElementById('export').addEventListener('click', () => {
+            vscode.postMessage({ command: 'export' });
+        });
+
+        document.getElementById('prev').addEventListener('click', () => {
+            if (state.currentPage > 1) {
+                state.currentPage--;
+                vscode.postMessage({
+                    command: 'navigate',
+                    page: state.currentPage
+                });
+            }
+        });
+
+        document.getElementById('next').addEventListener('click', () => {
+            state.currentPage++;
+            vscode.postMessage({
+                command: 'navigate',
+                page: state.currentPage
+            });
+        });
+
+        // Add click handlers to table headers for sorting
+        document.getElementById('table-header').addEventListener('click', (event) => {
+            if (event.target.tagName === 'TH') {
+                const columnIndex = Array.from(event.target.parentNode.children).indexOf(event.target);
+                const column = state.columns[columnIndex];
+
+                // Toggle sort direction if clicking the same column
+                if (state.sortColumn === column) {
+                    state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    state.sortColumn = column;
+                    state.sortDirection = 'asc';
+                }
+
+                vscode.postMessage({
+                    command: 'sort',
+                    column: state.sortColumn,
+                    direction: state.sortDirection
+                });
+
+                // Update sort indicators
+                document.querySelectorAll('th').forEach((h, i) => {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                    if (i === columnIndex) {
+                        h.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                    }
+                });
+            }
+        });
+
+        // Handle messages from VS Code
+        window.addEventListener('message', event => {
+            const message = event.data;
+
+            switch (message.command) {
+                case 'updateData':
+                    // Update the table with new data
+                    state = { ...state, ...message.data };
+                    renderTable();
+                    break;
+            }
+        });
+    </script>
+</body>
+
+</html>

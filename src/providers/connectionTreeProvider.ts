@@ -325,8 +325,8 @@ class FolderNodeHandler implements NodeHandler {
   }
 
   private getTableItems(tables: string[], parent: ConnectionTreeItem): ConnectionTreeItem[] {
-    return tables.map(table =>
-      new ConnectionTreeItem(
+    return tables.map(table => {
+      const tableItem = new ConnectionTreeItem(
         table,
         vscode.TreeItemCollapsibleState.None,
         parent.connection,
@@ -334,8 +334,17 @@ class FolderNodeHandler implements NodeHandler {
         'table',
         parent.databaseName,
         parent
-      )
-    );
+      );
+      
+      // Add command to view table data when clicked
+      tableItem.command = {
+        command: 'arc-db.viewTable',
+        title: 'View Table Data',
+        arguments: [tableItem]
+      };
+      
+      return tableItem;
+    });
   }
 
   private getViewItems(views: string[], parent: ConnectionTreeItem): ConnectionTreeItem[] {

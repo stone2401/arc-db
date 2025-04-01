@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src {{cspSource}} https:; script-src {{cspSource}} 'unsafe-inline'; style-src {{cspSource}} 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; img-src {{cspSource}} https:; script-src {{cspSource}} 'unsafe-inline'; style-src {{cspSource}} 'unsafe-inline';">
     <title>{{title}}</title>
     <style>
         body {
@@ -12,18 +14,19 @@
             background-color: var(--vscode-editor-background);
             padding: 20px;
         }
-        
+
         .form-group {
             margin-bottom: 15px;
         }
-        
+
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        
-        input, select {
+
+        input,
+        select {
             width: 100%;
             padding: 8px;
             box-sizing: border-box;
@@ -32,12 +35,13 @@
             border: 1px solid var(--vscode-input-border, transparent);
             border-radius: 2px;
         }
-        
-        input:focus, select:focus {
+
+        input:focus,
+        select:focus {
             outline: 1px solid var(--vscode-focusBorder);
             border-color: var(--vscode-focusBorder);
         }
-        
+
         button {
             padding: 8px 12px;
             margin-right: 8px;
@@ -47,51 +51,52 @@
             border-radius: 2px;
             cursor: pointer;
         }
-        
+
         button:hover {
             background-color: var(--vscode-button-hoverBackground);
         }
-        
+
         button.secondary {
             background-color: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
         }
-        
+
         button.secondary:hover {
             background-color: var(--vscode-button-secondaryHoverBackground);
         }
-        
+
         .status {
             margin-top: 15px;
             padding: 10px;
             border-radius: 3px;
             display: none;
         }
-        
+
         .status.success {
             background-color: var(--vscode-notificationsSuccessIcon-foreground, rgba(0, 255, 0, 0.1));
             color: var(--vscode-notificationsSuccessIcon-foreground, green);
             border: 1px solid var(--vscode-notificationsSuccessIcon-foreground, green);
         }
-        
+
         .status.error {
             background-color: var(--vscode-notificationsErrorIcon-foreground, rgba(255, 0, 0, 0.1));
             color: var(--vscode-notificationsErrorIcon-foreground, red);
             border: 1px solid var(--vscode-notificationsErrorIcon-foreground, red);
         }
-        
+
         .hidden {
             display: none;
         }
     </style>
 </head>
+
 <body>
     <form id="connectionForm">
         <div class="form-group">
             <label for="name">Connection Name</label>
             <input type="text" id="name" name="name" required>
         </div>
-        
+
         <div class="form-group">
             <label for="type">Database Type</label>
             <select id="type" name="type">
@@ -101,43 +106,43 @@
                 <option value="sqlite">SQLite</option>
             </select>
         </div>
-        
+
         <div id="standardFields">
             <div class="form-group">
                 <label for="host">Host</label>
                 <input type="text" id="host" name="host" value="localhost">
             </div>
-            
+
             <div class="form-group">
                 <label for="port">Port</label>
                 <input type="number" id="port" name="port">
             </div>
-            
+
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username">
             </div>
-            
+
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password">
             </div>
-            
+
             <div class="form-group">
                 <label for="database">Database</label>
                 <input type="text" id="database" name="database">
             </div>
         </div>
-        
+
         <div id="sqliteFields" class="hidden">
             <div class="form-group">
                 <label for="file">Database File</label>
                 <input type="text" id="file" name="file">
             </div>
         </div>
-        
+
         <div id="statusMessage" class="status"></div>
-        
+
         <div class="form-actions" style="margin-top: 20px;">
             <button type="button" id="testButton">Test Connection</button>
             <button type="submit" id="saveButton">Save</button>
@@ -152,10 +157,10 @@
         const initialData = TEMPLATE_INITIAL_DATA;
         const initialConnection = initialData.initialConnection || {};
         const isEditMode = initialData.isEditMode || false;
-        
+
         console.log('Script loaded');
         console.log('Initial data:', initialData);
-        
+
         // DOM elements
         const form = document.getElementById('connectionForm');
         const typeSelect = document.getElementById('type');
@@ -165,7 +170,7 @@
         const testButton = document.getElementById('testButton');
         const saveButton = document.getElementById('saveButton');
         const cancelButton = document.getElementById('cancelButton');
-        
+
         console.log('DOM elements:', {
             form: !!form,
             typeSelect: !!typeSelect,
@@ -176,17 +181,17 @@
             saveButton: !!saveButton,
             cancelButton: !!cancelButton
         });
-        
+
         // Initialize form values
         document.getElementById('name').value = initialConnection.name || '';
         typeSelect.value = initialConnection.type || 'mysql';
         document.getElementById('host').value = initialConnection.host || 'localhost';
-        document.getElementById('port').value = initialConnection.port || getDefaultPort(typeSelect.value);
+        document.getElementById('port').value = initialConnection.port ? initialConnection.port.toString() : getDefaultPort(typeSelect.value);
         document.getElementById('username').value = initialConnection.username || '';
         document.getElementById('password').value = initialConnection.password || '';
         document.getElementById('database').value = initialConnection.database || '';
-        document.getElementById('file').value = initialConnection.file || '';
-        
+        document.getElementById('file').value = initialConnection.filename || '';
+
         // Toggle fields based on database type
         function toggleFields() {
             const type = typeSelect.value;
@@ -199,23 +204,23 @@
                 document.getElementById('port').value = getDefaultPort(type);
             }
         }
-        
+
         // Get default port based on database type
         function getDefaultPort(type) {
             switch (type) {
                 case 'mysql': return 3306;
-                case 'postgres': return 5432;
+                case 'postgresql': return 5432;
                 case 'mssql': return 1433;
                 default: return '';
             }
         }
-        
+
         // Show status message
         function showStatus(message, isSuccess) {
             statusMessage.textContent = message;
             statusMessage.className = 'status ' + (isSuccess ? 'success' : 'error');
             statusMessage.style.display = 'block';
-        
+
             // Hide after 5 seconds if it's a success message
             if (isSuccess) {
                 setTimeout(() => {
@@ -223,7 +228,7 @@
                 }, 5000);
             }
         }
-        
+
         // Get form data as object
         function getFormData() {
             const type = typeSelect.value;
@@ -231,7 +236,7 @@
                 name: document.getElementById('name').value,
                 type: type
             };
-        
+
             if (type === 'sqlite') {
                 data.filename = document.getElementById('file').value;
             } else {
@@ -241,17 +246,19 @@
                 data.password = document.getElementById('password').value;
                 data.database = document.getElementById('database').value;
             }
-        
+
             return data;
         }
-        
+
         // Event listeners
         typeSelect.addEventListener('change', toggleFields);
         console.log('Added change event listener to typeSelect');
-        
+
         // Initialize fields based on type
-        toggleFields();
-        
+        if (initialConnection.id === undefined) {
+            toggleFields();
+        }
+
         // Test connection
         testButton.addEventListener('click', () => {
             console.log('Test button clicked');
@@ -265,7 +272,7 @@
             });
         });
         console.log('Added click event listener to testButton');
-        
+
         // Save connection
         form.addEventListener('submit', (e) => {
             console.log('Form submitted');
@@ -278,7 +285,7 @@
             });
         });
         console.log('Added submit event listener to form');
-        
+
         // Cancel
         cancelButton.addEventListener('click', () => {
             console.log('Cancel button clicked');
@@ -287,11 +294,11 @@
             });
         });
         console.log('Added click event listener to cancelButton');
-        
+
         // Handle messages from extension
         window.addEventListener('message', (event) => {
             const message = event.data;
-        
+
             if (message.command === 'testConnectionResult') {
                 testButton.disabled = false;
                 testButton.textContent = 'Test Connection';
@@ -300,4 +307,5 @@
         });
     </script>
 </body>
+
 </html>

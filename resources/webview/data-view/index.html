@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; img-src {{cspSource}} https:; script-src {{cspSource}} 'unsafe-inline'; style-src {{cspSource}} 'unsafe-inline';">
+    <title>{{tableName}} - Data</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Toolbar styles */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: var(--vscode-editor-background);
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .connection-name,
+        .database-name,
+        .table-name {
+            font-weight: 500;
+        }
+
+        .table-name {
+            font-weight: 600;
+        }
+
+        .separator {
+            margin: 0 8px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Button styles */
+        .button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 6px 10px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .button.secondary {
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+
+        .button.secondary:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        /* Filter styles */
+        .filter-container {
+            border-bottom: 1px solid var(--vscode-panel-border);
+            background-color: var(--vscode-editor-background);
+            padding: 8px 12px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .filter-column,
+        .filter-operator,
+        .filter-value {
+            padding: 4px 8px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 2px;
+        }
+
+        .filter-value {
+            flex: 1;
+        }
+
+        /* Table styles */
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            border-right: 1px solid var(--vscode-panel-border);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding: 6px 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            z-index: 1;
+        }
+
+        th:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        tr {
+            transition: background-color 0.15s ease;
+        }
+
+        tr:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        tr.selected {
+            background-color: var(--vscode-list-activeSelectionBackground);
+            color: var(--vscode-list-activeSelectionForeground);
+        }
+
+        .sort-icon::after {
+            content: '';
+            display: inline-block;
+            margin-left: 5px;
+            width: 8px;
+            height: 8px;
+        }
+
+        .sort-asc::after {
+            content: '↑';
+        }
+
+        .sort-desc::after {
+            content: '↓';
+        }
+
+        /* Status bar styles */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: var(--vscode-statusBar-background);
+            color: var(--vscode-statusBar-foreground);
+            font-size: 12px;
+            border-top: 1px solid var(--vscode-panel-border);
+        }
+
+        .row-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .page-info {
+            margin: 0 8px;
+        }
+
+        #page-size {
+            padding: 2px 4px;
+            background-color: var(--vscode-dropdown-background);
+            color: var(--vscode-dropdown-foreground);
+            border: 1px solid var(--vscode-dropdown-border);
+            border-radius: 2px;
+        }
+
+        /* Null value styling */
+        .null-value {
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Top toolbar -->
+        <div class="toolbar">
+            <div class="breadcrumb">
+                <span class="connection-name">{{connectionName}}</span>
+                <span class="separator">></span>
+                <span class="database-name">{{databaseName}}</span>
+                <span class="separator">></span>
+                <span class="table-name">{{tableName}}</span>
+            </div>
+            <div class="actions">
+                <button class="button" id="refresh">
+                    <span>Refresh</span>
+                </button>
+                <button class="button" id="execute-query">
+                    <span>Execute Query</span>
+                </button>
+                <button class="button" id="export">
+                    <span>Export</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter area -->
+        <div class="filter-container">
+            <div class="filter-row">
+                <select class="filter-column" id="filter-column">
+                    <option value="">Select column</option>
+                </select>
+                <select class="filter-operator" id="filter-operator">
+                    <option value="=">=</option>
+                    <option value="!=">!=</option>
+                    <option value=">">></option>
+                    <option value="<">
+                        << /option>
+                    <option value=">=">>=</option>
+                    <option value="<=">
+                        <=< /option>
+                    <option value="LIKE">LIKE</option>
+                    <option value="IS NULL">IS NULL</option>
+                    <option value="IS NOT NULL">IS NOT NULL</option>
+                </select>
+                <input type="text" class="filter-value" id="filter-value">
+                <button class="button" id="apply-filter">Apply</button>
+                <button class="button secondary" id="clear-filter">Clear</button>
+            </div>
+        </div>
+
+        <!-- Data table -->
+        <div class="table-container">
+            <table id="data-table">
+                <thead id="table-header">
+                    <!-- Table headers will be inserted here by JavaScript -->
+                </thead>
+                <tbody id="table-body">
+                    <!-- Table rows will be inserted here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Status bar -->
+        <div class="status-bar">
+            <div class="row-info">
+                <span>Total: <span id="row-count">{{rowCount}}</span> rows</span>
+            </div>
+            <div class="pagination">
+                <button class="button" id="prev-page">Previous</button>
+                <span class="page-info">
+                    Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+                </span>
+                <button class="button" id="next-page">Next</button>
+                <select id="page-size">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize with data from VS Code
+        const vscode = acquireVsCodeApi();
+        const initialData = TEMPLATE_INITIAL_DATA;
+        console.log('initialData', initialData);
+
+        // Store state in webview
+        let state = {
+            columns: initialData.columns || [],
+            data: initialData.data || [],
+            tableName: initialData.tableName || '',
+            connectionName: initialData.connectionName || '',
+            databaseName: initialData.databaseName || '',
+            currentPage: initialData.currentPage || 1,
+            totalPages: initialData.totalPages || 1,
+            pageSize: 100,
+            sortColumn: null,
+            sortDirection: 'asc',
+            filters: []
+        };
+
+        // Initialize filter column dropdown
+        function initializeFilterColumns() {
+            const filterColumn = document.getElementById('filter-column');
+            filterColumn.innerHTML = '<option value="">Select column</option>';
+
+            state.columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column;
+                option.textContent = column;
+                filterColumn.appendChild(option);
+            });
+        }
+
+        // Function to render the table
+        function renderTable() {
+            // Render table headers
+            const headerRow = document.createElement('tr');
+
+            state.columns.forEach(column => {
+                const th = document.createElement('th');
+                th.textContent = column;
+                th.dataset.column = column;
+
+                // Add sort indicator if this column is sorted
+                if (state.sortColumn === column) {
+                    th.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+
+                headerRow.appendChild(th);
+            });
+
+            // Clear and append the header row
+            const tableHeader = document.getElementById('table-header');
+            tableHeader.innerHTML = '';
+            tableHeader.appendChild(headerRow);
+
+            // Render table rows
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+
+            state.data.forEach(row => {
+                const tr = document.createElement('tr');
+
+                state.columns.forEach(column => {
+                    const td = document.createElement('td');
+                    const value = row[column];
+
+                    if (value === null) {
+                        td.innerHTML = '<span class="null-value">NULL</span>';
+                    } else {
+                        td.textContent = value.toString();
+                    }
+
+                    tr.appendChild(td);
+                });
+
+                tableBody.appendChild(tr);
+            });
+
+            // Update row count and pagination
+            document.getElementById('row-count').textContent = initialData.rowCount;
+            document.getElementById('current-page').textContent = state.currentPage;
+            document.getElementById('total-pages').textContent = state.totalPages;
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Refresh button
+            document.getElementById('refresh').addEventListener('click', () => {
+                vscode.postMessage({ command: 'refresh' });
+            });
+
+            // Execute query button
+            document.getElementById('execute-query').addEventListener('click', () => {
+                const query = prompt('Enter SQL query:', `SELECT * FROM "${state.tableName}" LIMIT 100`);
+                if (query) {
+                    vscode.postMessage({
+                        command: 'executeQuery',
+                        query: query
+                    });
+                }
+            });
+
+            // Export button
+            document.getElementById('export').addEventListener('click', () => {
+                const format = prompt('Export format (csv, json, sql):', 'csv');
+                if (format) {
+                    vscode.postMessage({
+                        command: 'export',
+                        format: format,
+                        selectedOnly: false
+                    });
+                }
+            });
+
+            // Filter buttons
+            document.getElementById('apply-filter').addEventListener('click', () => {
+                const column = document.getElementById('filter-column').value;
+                const operator = document.getElementById('filter-operator').value;
+                const value = document.getElementById('filter-value').value;
+
+                if (column) {
+                    const filters = [{
+                        column,
+                        operator,
+                        value
+                    }];
+
+                    vscode.postMessage({
+                        command: 'filter',
+                        filters: filters
+                    });
+                }
+            });
+
+            document.getElementById('clear-filter').addEventListener('click', () => {
+                document.getElementById('filter-column').selectedIndex = 0;
+                document.getElementById('filter-operator').selectedIndex = 0;
+                document.getElementById('filter-value').value = '';
+
+                vscode.postMessage({
+                    command: 'clearFilters'
+                });
+            });
+
+            // Pagination buttons
+            document.getElementById('prev-page').addEventListener('click', () => {
+                if (state.currentPage > 1) {
+                    vscode.postMessage({
+                        command: 'navigate',
+                        page: state.currentPage - 1,
+                        pageSize: state.pageSize
+                    });
+                }
+            });
+
+            document.getElementById('next-page').addEventListener('click', () => {
+                if (state.currentPage < state.totalPages) {
+                    vscode.postMessage({
+                        command: 'navigate',
+                        page: state.currentPage + 1,
+                        pageSize: state.pageSize
+                    });
+                }
+            });
+
+            // Page size change
+            document.getElementById('page-size').addEventListener('change', (event) => {
+                state.pageSize = parseInt(event.target.value);
+                vscode.postMessage({
+                    command: 'navigate',
+                    page: 1,
+                    pageSize: state.pageSize
+                });
+            });
+
+            // Table header click for sorting
+            document.getElementById('table-header').addEventListener('click', (event) => {
+                if (event.target.tagName === 'TH') {
+                    const column = event.target.dataset.column;
+
+                    // Toggle sort direction if clicking the same column
+                    if (state.sortColumn === column) {
+                        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        state.sortColumn = column;
+                        state.sortDirection = 'asc';
+                    }
+
+                    vscode.postMessage({
+                        command: 'sort',
+                        column: state.sortColumn,
+                        direction: state.sortDirection
+                    });
+                }
+            });
+
+            // Handle messages from VS Code
+            window.addEventListener('message', event => {
+                const message = event.data;
+
+                switch (message.command) {
+                    case 'updateData':
+                        // Update the state with new data
+                        Object.assign(state, message.data);
+                        renderTable();
+                        break;
+                }
+            });
+        }
+
+        // Initialize the UI
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFilterColumns();
+            renderTable();
+            setupEventListeners();
+        });
+
+        // Initial render
+        initializeFilterColumns();
+        renderTable();
+        setupEventListeners();
+    </script>
+</body>
+
+</html>
