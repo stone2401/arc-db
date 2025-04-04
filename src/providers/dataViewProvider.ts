@@ -54,7 +54,7 @@ export class DataViewProvider {
         // Handle messages from the webview
         this.panel.webview.onDidReceiveMessage(async (message) => {
             console.log('Received message from webview:', message);
-            
+
             switch (message.command) {
                 case 'refresh':
                     vscode.commands.executeCommand('arc-db.refreshTableData', message.page, message.pageSize, message.sortColumn, message.sortDirection, message.filters);
@@ -109,6 +109,15 @@ export class DataViewProvider {
         // Get the local path to the webview resources
         const htmlPath = path.join(this.context.extensionPath, 'resources', 'webview', 'data-view', 'index.html');
 
+        // 获取CSS和JS文件的URI
+        const cssUri = this.panel!.webview.asWebviewUri(
+            vscode.Uri.file(path.join(this.context.extensionPath, 'resources', 'webview', 'data-view', 'css', 'styles.css'))
+        );
+
+        const jsUri = this.panel!.webview.asWebviewUri(
+            vscode.Uri.file(path.join(this.context.extensionPath, 'resources', 'webview', 'data-view', 'js', 'main.js'))
+        );
+
         // Read the HTML template
         let html = fs.readFileSync(htmlPath, 'utf8');
 
@@ -126,13 +135,18 @@ export class DataViewProvider {
             totalPages: Math.ceil(data.length / 100)
         };
 
+        // 将数据序列化为JSON字符串
+        const dataString = JSON.stringify(initData);
+
         // Replace template variables in the HTML
         html = html.replace(/{{tableName}}/g, tableName)
             .replace(/{{connectionName}}/g, connectionName)
             .replace(/{{databaseName}}/g, databaseName || tableName.split('.')[0] || '')
             .replace(/{{rowCount}}/g, data.length.toString())
             .replace(/{{cspSource}}/g, this.panel?.webview.cspSource || '')
-            .replace('TEMPLATE_INITIAL_DATA', JSON.stringify(initData));
+            .replace(/{{cssPath}}/g, cssUri.toString())
+            .replace(/{{jsPath}}/g, jsUri.toString())
+            .replace('DATA_PLACEHOLDER', dataString);
 
         return html;
     }
