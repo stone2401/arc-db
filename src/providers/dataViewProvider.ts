@@ -135,7 +135,7 @@ export class DataViewProvider {
             totalPages: Math.ceil(data.length / 100)
         };
 
-        // 将数据序列化为JSON字符串
+        // 将数据序列化为JSON字符串，确保正确处理特殊字符
         const dataString = JSON.stringify(initData);
 
         // Replace template variables in the HTML

@@ -22,14 +22,14 @@
                 <span class="table-name">{{tableName}}</span>
             </div>
             <div class="actions">
-                <button class="button" id="refresh">
-                    <span>Refresh</span>
+                <button class="button" id="refresh" title="刷新数据">
+                    <span>刷新</span>
                 </button>
-                <button class="button" id="execute-query">
-                    <span>Execute Query</span>
+                <button class="button" id="execute-query" title="执行自定义查询">
+                    <span>执行SQL</span>
                 </button>
-                <button class="button" id="export">
-                    <span>Export</span>
+                <button class="button" id="export" title="导出数据">
+                    <span>导出</span>
                 </button>
             </div>
         </div>
@@ -37,10 +37,10 @@
         <!-- Filter area -->
         <div class="filter-container">
             <div class="filter-row">
-                <select class="filter-column" id="filter-column">
-                    <option value="">Select column</option>
+                <select class="filter-column" id="filter-column" title="选择要筛选的列">
+                    <option value="">选择列</option>
                 </select>
-                <select class="filter-operator" id="filter-operator">
+                <select class="filter-operator" id="filter-operator" title="选择筛选条件">
                     <option value="=">=</option>
                     <option value="!=">!=</option>
                     <option value=">">></option>
@@ -53,9 +53,15 @@
                     <option value="IS NULL">IS NULL</option>
                     <option value="IS NOT NULL">IS NOT NULL</option>
                 </select>
-                <input type="text" class="filter-value" id="filter-value">
-                <button class="button" id="apply-filter">Apply</button>
-                <button class="button secondary" id="clear-filter">Clear</button>
+                <input type="text" class="filter-value" id="filter-value" placeholder="输入筛选值">
+                <button class="button" id="apply-filter" title="应用筛选">应用</button>
+                <button class="button secondary" id="clear-filter" title="清除筛选">清除</button>
+
+                <!-- 快速搜索已移至右侧 -->
+                <div class="quick-filter">
+                    <span class="quick-filter-label">快速搜索：</span>
+                    <input type="text" id="quick-search" placeholder="搜索所有列" title="搜索所有列">
+                </div>
             </div>
         </div>
 
@@ -69,37 +75,47 @@
                     <!-- Table rows will be inserted here by JavaScript -->
                 </tbody>
             </table>
+            <div class="copy-hint" id="copy-hint">已复制到剪贴板</div>
+            <div id="content-tooltip" class="tooltip"></div>
+            <div id="scroll-hint" class="scroll-hint">← 左右滑动查看更多 →</div>
         </div>
 
         <!-- Status bar -->
         <div class="status-bar">
             <div class="row-info">
-                <span>Total: <span id="row-count">{{rowCount}}</span> rows</span>
+                <span>总计: <span id="row-count">{{rowCount}}</span> 行</span>
             </div>
             <div class="pagination">
-                <button class="button" id="prev-page">Previous</button>
+                <button class="button" id="prev-page" title="上一页">上一页</button>
                 <span class="page-info">
-                    Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+                    页码 <span id="current-page">1</span> / <span id="total-pages">1</span>
                 </span>
-                <button class="button" id="next-page">Next</button>
-                <select id="page-size">
-                    <option value="50">50</option>
-                    <option value="100" selected>100</option>
-                    <option value="200">200</option>
-                    <option value="500">500</option>
+                <button class="button" id="next-page" title="下一页">下一页</button>
+                <select id="page-size" title="每页显示行数">
+                    <option value="50">50行/页</option>
+                    <option value="100" selected>100行/页</option>
+                    <option value="200">200行/页</option>
+                    <option value="500">500行/页</option>
                 </select>
             </div>
         </div>
     </div>
 
-    <script src="{{jsPath}}"></script>
     <script>
         // 初始化数据
-        const data = DATA_PLACEHOLDER;
-        window.onload = function () {
-            initializeDataView(data);
-        };
+        window.__initialData = DATA_PLACEHOLDER;
+
+        // 接收来自VSCode扩展的更新数据
+        window.addEventListener('message', function (event) {
+            const message = event.data;
+
+            if (message.command === 'updateData') {
+                // 更新数据消息由eventHandlers.js中的setupVSCodeMessageEvents处理
+                console.log('收到数据更新消息');
+            }
+        });
     </script>
+    <script type="module" src="{{jsPath}}"></script>
 </body>
 
 </html>
