@@ -50,6 +50,11 @@
       {
         "command": "arc-db.exportData",
         "title": "Export Data"
+      },
+      {
+        "command": "arc-db.refreshDatabaseStructure",
+        "title": "刷新数据库结构",
+        "icon": "$(sync)"
       }
     ],
     "viewsContainers": {
@@ -96,6 +101,11 @@
         },
         {
           "command": "arc-db.deleteConnection",
+          "when": "view == arcDbConnectionsView && viewItem == connection",
+          "group": "1_connection"
+        },
+        {
+          "command": "arc-db.refreshDatabaseStructure",
           "when": "view == arcDbConnectionsView && viewItem == connection",
           "group": "1_connection"
         },

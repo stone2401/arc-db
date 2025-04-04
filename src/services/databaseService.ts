@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { DatabaseConnection, DatabaseType } from '../models/connection';
 import { DatabaseServiceFactory } from './DatabaseServiceFactory';
 import { Logger } from './Logger';
+import { MetadataCache } from './metadataCache';
 
 export interface QueryResult {
   columns: string[];
@@ -32,9 +33,11 @@ export class DatabaseService {
   private static instance: DatabaseService;
   private connections: Map<string, { connection: any; type: DatabaseType; name: string }> = new Map();
   private factory: DatabaseServiceFactory;
+  private metadataCache: MetadataCache;
 
   private constructor() {
     this.factory = DatabaseServiceFactory.getInstance();
+    this.metadataCache = MetadataCache.getInstance();
   }
 
   public static getInstance(): DatabaseService {
@@ -101,6 +104,9 @@ export class DatabaseService {
       // Disconnect from the database
       await service.disconnect(conn.connection);
 
+      // 清除该连接的缓存
+      this.metadataCache.clearConnectionCache(connectionId);
+      
       this.connections.delete(connectionId);
 
       // Log successful disconnection
@@ -175,6 +181,13 @@ export class DatabaseService {
         throw new Error(`Connection not found: ${connectionId}`);
       }
 
+      // 检查缓存中是否有数据
+      const cachedMetadata = this.metadataCache.getMetadata(connectionId);
+      if (cachedMetadata) {
+        Logger.logOperation(conn.name, conn.type, 'Using cached database metadata');
+        return cachedMetadata;
+      }
+
       // Log the metadata retrieval operation
       Logger.logOperation(conn.name, conn.type, 'Retrieving database metadata');
 
@@ -183,6 +196,9 @@ export class DatabaseService {
 
       // Get the database metadata
       const metadata = await service.getDatabaseMetadata(conn.connection);
+
+      // 将获取到的元数据存入缓存
+      this.metadataCache.setMetadata(connectionId, metadata);
 
       // Log the metadata summary
       Logger.logResult(`Found ${metadata.databases.length} databases`);
@@ -210,6 +226,16 @@ export class DatabaseService {
         throw new Error(`Connection not found: ${connectionId}`);
       }
 
+      // 生成缓存键
+      const cacheKey = `${connectionId}:${database}:${table}`;
+      
+      // 检查缓存中是否有数据
+      const cachedStructure = this.metadataCache.getTableStructure(cacheKey);
+      if (cachedStructure) {
+        Logger.logOperation(conn.name, conn.type, `Using cached structure for table ${database}.${table}`);
+        return cachedStructure;
+      }
+
       // Log the table structure retrieval operation
       Logger.logOperation(conn.name, conn.type, `Retrieving structure for table ${database}.${table}`);
 
@@ -218,6 +244,9 @@ export class DatabaseService {
 
       // Get the table structure
       const structure = await service.getTableStructure(conn.connection, database, table);
+
+      // 将获取到的表结构存入缓存
+      this.metadataCache.setTableStructure(cacheKey, structure);
 
       // Log the structure summary
       Logger.logResult(`Table ${structure.name} has ${structure.columns.length} columns`);
@@ -236,5 +265,50 @@ export class DatabaseService {
 
   public isConnected(connectionId: string): boolean {
     return this.connections.has(connectionId);
+  }
+
+  /**
+   * 刷新特定连接的元数据缓存
+   * @param connectionId 连接ID
+   */
+  public async refreshMetadata(connectionId: string): Promise<DatabaseMetadata> {
+    try {
+      const conn = this.connections.get(connectionId);
+      if (!conn) {
+        throw new Error(`Connection not found: ${connectionId}`);
+      }
+
+      // 清除该连接的缓存
+      this.metadataCache.clearConnectionCache(connectionId);
+
+      // Log the metadata refresh operation
+      Logger.logOperation(conn.name, conn.type, 'Refreshing database metadata');
+
+      // Get the appropriate database service
+      const service = this.factory.getService(conn.type);
+
+      // Get the database metadata
+      const metadata = await service.getDatabaseMetadata(conn.connection);
+
+      // 将获取到的元数据存入缓存
+      this.metadataCache.setMetadata(connectionId, metadata);
+
+      // Log the metadata summary
+      Logger.logResult(`Found ${metadata.databases.length} databases`);
+      metadata.databases.forEach(db => {
+        const tableCount = metadata.tables[db]?.length || 0;
+        const viewCount = metadata.views[db]?.length || 0;
+        const procCount = metadata.procedures[db]?.length || 0;
+        Logger.logResult(`  - ${db}: ${tableCount} tables, ${viewCount} views, ${procCount} procedures`);
+      });
+      Logger.logResult('');
+
+      return metadata;
+    } catch (error) {
+      console.error('Metadata refresh error:', error);
+      // Log the error
+      Logger.logError('refreshing metadata', error);
+      throw error;
+    }
   }
 }

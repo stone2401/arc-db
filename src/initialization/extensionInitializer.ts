@@ -7,6 +7,9 @@ import { ConnectionFormProvider } from '../views/connectionFormProvider';
 import { DatabaseService } from '../services/databaseService';
 import { DatabaseType } from '../models/connection';
 
+// 导出全局变量，以便在其他地方访问
+export let globalConnectionTreeProvider: ConnectionTreeProvider;
+
 /**
  * Initializes all extension components
  */
@@ -17,6 +20,8 @@ export function initializeExtensionComponents(context: vscode.ExtensionContext) 
   
   // Initialize providers
   const connectionTreeProvider = new ConnectionTreeProvider();
+  globalConnectionTreeProvider = connectionTreeProvider; // 保存为全局变量
+  
   const dataViewProvider = DataViewProvider.getInstance(context);
   const queryResultsProvider = QueryResultsProvider.getInstance();
   const connectionFormProvider = ConnectionFormProvider.getInstance(context);

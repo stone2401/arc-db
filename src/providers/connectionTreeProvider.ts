@@ -94,6 +94,21 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<Connectio
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * 刷新特定连接的数据，会清除缓存并重新获取数据
+   * @param connectionId 要刷新的连接ID
+   */
+  async refreshConnection(connectionId: string): Promise<void> {
+    try {
+      // 刷新连接的元数据缓存
+      await this.databaseService.refreshMetadata(connectionId);
+      this.refresh();
+    } catch (error) {
+      console.error('Error refreshing connection:', error);
+      vscode.window.showErrorMessage(`刷新连接失败: ${error}`);
+    }
+  }
+
   setConnections(connections: DatabaseConnection[]): void {
     this.connections = connections;
     // Update the connections in the root handler
