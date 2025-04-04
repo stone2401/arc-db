@@ -49,8 +49,17 @@ export function showCellContent(td, content, column) {
     // 格式化内容（完整内容）
     const formattedContent = formatCellValue(content, column, true);
 
-    // 设置工具提示内容
-    tooltip.textContent = formattedContent;
+    // 清空现有内容
+    tooltip.innerHTML = '';
+
+    // 如果内容是对象且已经被JSON格式化，使用pre标签保持格式
+    if (typeof content === 'object' && content !== null) {
+        const pre = document.createElement('pre');
+        pre.textContent = formattedContent;
+        tooltip.appendChild(pre);
+    } else {
+        tooltip.textContent = formattedContent;
+    }
 
     // 获取单元格位置
     const rect = td.getBoundingClientRect();

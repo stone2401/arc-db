@@ -15,6 +15,7 @@ interface TableViewState {
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
   filters?: TableFilter[];
+  sortColumns?: { column: string; direction?: 'asc' | 'desc' }[];
 }
 
 // 用于导出时的无分页状态
@@ -158,16 +159,62 @@ export function registerDataCommands(
       }
     }),
 
-    vscode.commands.registerCommand('arc-db.sortTableData', async (column: string, direction: 'asc' | 'desc') => {
+    vscode.commands.registerCommand('arc-db.sortTableData', async (columnOrRequest: string | { sortColumns?: Array<{ column: string, direction?: 'asc' | 'desc' }>, sortColumn?: string, sortDirection?: 'asc' | 'desc', filters?: TableFilter[] }, direction?: 'asc' | 'desc', filters?: TableFilter[]) => {
       if (!currentTableView) {
         vscode.window.showErrorMessage('No active table view to sort.');
         return;
       }
 
       try {
-        // Update sorting in current view state
-        currentTableView.sortColumn = column;
-        currentTableView.sortDirection = direction;
+        console.log('接收到排序请求:', JSON.stringify({ columnOrRequest, direction, filters }));
+
+        // 检查请求类型，支持新的对象格式
+        if (typeof columnOrRequest === 'object') {
+          // 对象形式的请求
+          const request = columnOrRequest;
+          console.log('处理对象形式的排序请求:', JSON.stringify(request));
+
+          // 处理多列排序
+          if (request.sortColumns && request.sortColumns.length > 0) {
+            console.log('应用多列排序:', JSON.stringify(request.sortColumns));
+            currentTableView.sortColumns = request.sortColumns;
+            currentTableView.sortColumn = undefined; // 清除单列排序
+          }
+          // 处理单列排序
+          else if (request.sortColumn) {
+            console.log('应用单列排序:', request.sortColumn, request.sortDirection);
+            currentTableView.sortColumn = request.sortColumn;
+            currentTableView.sortDirection = request.sortDirection || 'asc';
+            currentTableView.sortColumns = []; // 清除多列排序
+          }
+
+          // 如果请求中包含筛选条件
+          if (request.filters) {
+            currentTableView.filters = request.filters;
+          }
+        }
+        // 兼容旧的API
+        else {
+          // 单列排序
+          console.log('应用传统单列排序:', columnOrRequest, direction);
+          currentTableView.sortColumn = columnOrRequest;
+          currentTableView.sortDirection = direction || 'asc';
+          currentTableView.sortColumns = []; // 清除多列排序
+
+          // 如果同时提供了筛选条件，一起更新
+          if (filters) {
+            currentTableView.filters = filters;
+          }
+        }
+
+        // 显示当前排序状态
+        console.log('排序设置已更新, 当前状态:',
+          JSON.stringify({
+            sortColumn: currentTableView.sortColumn,
+            sortDirection: currentTableView.sortDirection,
+            sortColumns: currentTableView.sortColumns
+          })
+        );
 
         // Ensure the connection is established
         if (!databaseService.isConnected(currentTableView.connectionId)) {
@@ -177,24 +224,39 @@ export function registerDataCommands(
 
         // Execute query with updated sorting
         const sql = buildTableQuery(currentTableView);
+        console.log('执行SQL查询:', sql);
         const result = await databaseService.executeQuery(currentTableView.connectionId, sql);
 
         // Update the data view
         dataViewProvider.updateTableData(result.rows);
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to sort table data: ${error}`);
+        console.error('排序出错:', error);
       }
     }),
 
-    vscode.commands.registerCommand('arc-db.filterTableData', async (filters: TableFilter[]) => {
+    vscode.commands.registerCommand('arc-db.filterTableData', async (filters: TableFilter[], sortColumn?: string, sortDirection?: 'asc' | 'desc', sortColumns?: Array<{ column: string, direction?: 'asc' | 'desc' }>) => {
       if (!currentTableView) {
         vscode.window.showErrorMessage('No active table view to filter.');
         return;
       }
 
       try {
-        // Update filters in current view state
+        // 更新过滤条件
         currentTableView.filters = filters;
+
+        // 更新排序信息
+        if (sortColumns && sortColumns.length > 0) {
+          // 多列排序优先
+          currentTableView.sortColumns = sortColumns;
+          currentTableView.sortColumn = undefined; // 清除单列排序
+        } else if (sortColumn) {
+          // 单列排序
+          currentTableView.sortColumn = sortColumn;
+          currentTableView.sortDirection = sortDirection || 'asc';
+          currentTableView.sortColumns = []; // 清除多列排序
+        }
+
         // Reset to first page when applying filters
         currentTableView.page = 1;
 
@@ -396,6 +458,22 @@ function buildTableQuery(state: TableViewState): string {
         return `${filter.column} IS NOT NULL`;
       } else if (filter.operator === 'LIKE') {
         return `${filter.column} LIKE '%${filter.value}%'`;
+      } else if (filter.operator === 'IN') {
+        // 将逗号分隔的值转换为IN子句
+        const values = filter.value.split(',')
+          .map(val => val.trim())
+          .filter(val => val)
+          .map(val => `'${val.replace(/'/g, "''")}'`)
+          .join(', ');
+        return `${filter.column} IN (${values})`;
+      } else if (filter.operator === 'NOT IN') {
+        // 将逗号分隔的值转换为NOT IN子句
+        const values = filter.value.split(',')
+          .map(val => val.trim())
+          .filter(val => val)
+          .map(val => `'${val.replace(/'/g, "''")}'`)
+          .join(', ');
+        return `${filter.column} NOT IN (${values})`;
       } else {
         return `${filter.column} ${filter.operator} '${filter.value}'`;
       }
@@ -407,6 +485,12 @@ function buildTableQuery(state: TableViewState): string {
   // Add sorting if specified
   if (state.sortColumn) {
     sql += ` ORDER BY ${state.sortColumn} ${state.sortDirection || 'ASC'}`;
+  } else if (state.sortColumns && state.sortColumns.length > 0) {
+    // 支持多字段排序
+    const sortClauses = state.sortColumns.map(sort =>
+      `${sort.column} ${sort.direction || 'ASC'}`
+    );
+    sql += ` ORDER BY ${sortClauses.join(', ')}`;
   }
 
   // Add pagination
@@ -432,6 +516,22 @@ function buildExportQuery(state: ExportTableViewState): string {
         return `${filter.column} IS NOT NULL`;
       } else if (filter.operator === 'LIKE') {
         return `${filter.column} LIKE '%${filter.value}%'`;
+      } else if (filter.operator === 'IN') {
+        // 将逗号分隔的值转换为IN子句
+        const values = filter.value.split(',')
+          .map(val => val.trim())
+          .filter(val => val)
+          .map(val => `'${val.replace(/'/g, "''")}'`)
+          .join(', ');
+        return `${filter.column} IN (${values})`;
+      } else if (filter.operator === 'NOT IN') {
+        // 将逗号分隔的值转换为NOT IN子句
+        const values = filter.value.split(',')
+          .map(val => val.trim())
+          .filter(val => val)
+          .map(val => `'${val.replace(/'/g, "''")}'`)
+          .join(', ');
+        return `${filter.column} NOT IN (${values})`;
       } else {
         return `${filter.column} ${filter.operator} '${filter.value}'`;
       }
@@ -443,6 +543,12 @@ function buildExportQuery(state: ExportTableViewState): string {
   // Add sorting if specified
   if (state.sortColumn) {
     sql += ` ORDER BY ${state.sortColumn} ${state.sortDirection || 'ASC'}`;
+  } else if (state.sortColumns && state.sortColumns.length > 0) {
+    // 支持多字段排序
+    const sortClauses = state.sortColumns.map(sort =>
+      `${sort.column} ${sort.direction || 'ASC'}`
+    );
+    sql += ` ORDER BY ${sortClauses.join(', ')}`;
   }
 
   return sql;

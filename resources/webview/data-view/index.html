@@ -36,6 +36,9 @@
 
         <!-- Filter area -->
         <div class="filter-container">
+            <div class="filter-list" id="filter-list">
+                <!-- 这里会显示已添加的筛选条件 -->
+            </div>
             <div class="filter-row">
                 <select class="filter-column" id="filter-column" title="选择要筛选的列">
                     <option value="">选择列</option>
@@ -44,17 +47,18 @@
                     <option value="=">=</option>
                     <option value="!=">!=</option>
                     <option value=">">></option>
-                    <option value="<">
-                        << /option>
-                    <option value=">=">>=</option>
-                    <option value="<=">
-                        <=< /option>
+                    <option value="<"> &lt; </option>
+                    <option value=">="> &gt;= </option>
+                    <option value="<="> &lt;= </option>
                     <option value="LIKE">LIKE</option>
+                    <option value="IN">IN</option>
+                    <option value="NOT IN">NOT IN</option>
                     <option value="IS NULL">IS NULL</option>
                     <option value="IS NOT NULL">IS NOT NULL</option>
                 </select>
                 <input type="text" class="filter-value" id="filter-value" placeholder="输入筛选值">
-                <button class="button" id="apply-filter" title="应用筛选">应用</button>
+                <button class="button" id="add-filter" title="添加筛选条件">添加</button>
+                <button class="button" id="apply-filters" title="应用所有筛选">应用</button>
                 <button class="button secondary" id="clear-filter" title="清除筛选">清除</button>
 
                 <!-- 快速搜索已移至右侧 -->
@@ -76,7 +80,7 @@
                 </tbody>
             </table>
             <div class="copy-hint" id="copy-hint">已复制到剪贴板</div>
-            <div id="content-tooltip" class="tooltip"></div>
+            <div id="content-tooltip" class="content-tooltip"></div>
             <div id="scroll-hint" class="scroll-hint">← 左右滑动查看更多 →</div>
         </div>
 

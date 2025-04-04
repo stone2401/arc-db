@@ -108,20 +108,61 @@ body {
 
 /* Filter styles */
 .filter-container {
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--toolbar-background);
-    padding: var(--medium-spacing) var(--large-spacing);
-    position: relative;
+    padding: 5px;
+    background-color: var(--vscode-editor-background);
+    margin-bottom: 5px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+/* 筛选条件列表样式 */
+.filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+    gap: 5px;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    background-color: var(--vscode-badge-background, #4d4d4d);
+    color: var(--vscode-badge-foreground, #ffffff);
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: 12px;
+    max-width: 300px;
+    margin: 2px 0;
+}
+
+.filter-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.remove-filter {
+    cursor: pointer;
+    margin-left: 8px;
+    background: none;
+    border: none;
+    color: var(--vscode-badge-foreground, #ffffff);
+    font-weight: bold;
+    padding: 0 3px;
+}
+
+.remove-filter:hover {
+    color: var(--vscode-errorForeground, #f48771);
 }
 
 .filter-row {
     display: flex;
-    gap: var(--medium-spacing);
-    margin-bottom: var(--small-spacing);
-    align-items: center;
     flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
 }
 
+/* Filter styles */
 .filter-column,
 .filter-operator,
 .filter-value {
@@ -265,14 +306,43 @@ tr:nth-child(even) {
     content: '↑';
     position: absolute;
     right: 8px;
-    opacity: 0.8;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.9;
+    font-size: 14px;
+    color: var(--vscode-editorLink-activeForeground, #4080d0);
+    font-weight: bold;
 }
 
 .sort-desc::after {
     content: '↓';
     position: absolute;
     right: 8px;
-    opacity: 0.8;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.9;
+    font-size: 14px;
+    color: var(--vscode-editorLink-activeForeground, #4080d0);
+    font-weight: bold;
+}
+
+/* 多列排序序号 */
+th[data-sort-index]::before {
+    content: attr(data-sort-index);
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    font-size: 10px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    background-color: var(--vscode-badge-background, #4d4d4d);
+    color: var(--vscode-badge-foreground, #ffffff);
+    border-radius: 50%;
+    opacity: 1;
+    font-weight: bold;
+    z-index: 2;
 }
 
 /* 列类型指示器 */
@@ -410,11 +480,23 @@ td.timestamp {
     padding: 6px 10px;
     font-size: 12px;
     z-index: 100;
-    max-width: 400px;
-    max-height: 300px;
+    max-width: 600px;
+    max-height: 400px;
     overflow: auto;
     white-space: pre-wrap;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* JSON对象显示样式 */
+.content-tooltip pre {
+    margin: 0;
+    font-family: var(--vscode-editor-font-family, monospace);
+    white-space: pre;
+    word-wrap: normal;
+    overflow-x: auto;
+    background-color: var(--vscode-editor-background, rgba(0, 0, 0, 0.05));
+    padding: 5px;
+    border-radius: 3px;
 }
 
 /* 表头固定 */

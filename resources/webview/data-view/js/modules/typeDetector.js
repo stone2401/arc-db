@@ -89,51 +89,60 @@ export function formatCellValue(value, column, isFull = false) {
     const columnType = state.columnTypes[column];
     let formattedValue;
 
-    // 根据列类型格式化
-    switch (columnType) {
-        case 'integer':
-        case 'float':
-        case 'number':
-            formattedValue = String(value);
-            break;
-        case 'boolean':
-            // 对布尔值使用复选框表示
-            if (typeof value === 'boolean') {
-                formattedValue = value ? '✓' : '✗';
-            } else if (String(value).toLowerCase() === 'true' || value === 1) {
-                formattedValue = '✓';
-            } else if (String(value).toLowerCase() === 'false' || value === 0) {
-                formattedValue = '✗';
-            } else {
+    // 首先检查是否是对象类型且不是Date对象
+    if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+        try {
+            formattedValue = JSON.stringify(value, null, isFull ? 2 : 0);
+        } catch (e) {
+            formattedValue = String(value); // 如果JSON序列化失败，退回到String()
+        }
+    } else {
+        // 根据列类型格式化
+        switch (columnType) {
+            case 'integer':
+            case 'float':
+            case 'number':
                 formattedValue = String(value);
-            }
-            break;
-        case 'date':
-            try {
-                const date = new Date(value);
-                if (!isNaN(date)) {
-                    formattedValue = date.toLocaleDateString();
+                break;
+            case 'boolean':
+                // 对布尔值使用复选框表示
+                if (typeof value === 'boolean') {
+                    formattedValue = value ? '✓' : '✗';
+                } else if (String(value).toLowerCase() === 'true' || value === 1) {
+                    formattedValue = '✓';
+                } else if (String(value).toLowerCase() === 'false' || value === 0) {
+                    formattedValue = '✗';
                 } else {
                     formattedValue = String(value);
                 }
-            } catch (e) {
-                formattedValue = String(value);
-            }
-            break;
-        case 'datetime':
-            try {
-                const date = new Date(value);
-                if (!isNaN(date)) {
-                    formattedValue = date.toLocaleString();
-                } else {
+                break;
+            case 'date':
+                try {
+                    const date = new Date(value);
+                    if (!isNaN(date)) {
+                        formattedValue = date.toLocaleDateString();
+                    } else {
+                        formattedValue = String(value);
+                    }
+                } catch (e) {
                     formattedValue = String(value);
                 }
-            } catch (e) {
+                break;
+            case 'datetime':
+                try {
+                    const date = new Date(value);
+                    if (!isNaN(date)) {
+                        formattedValue = date.toLocaleString();
+                    } else {
+                        formattedValue = String(value);
+                    }
+                } catch (e) {
+                    formattedValue = String(value);
+                }
+                break;
+            default:
                 formattedValue = String(value);
-            }
-            break;
-        default:
-            formattedValue = String(value);
+        }
     }
 
     // 如果不是展示完整内容且长度超过限制，截断显示

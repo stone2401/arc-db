@@ -10,9 +10,11 @@ export let state = {
     currentPage: 1,
     totalPages: 1,
     pageSize: 100,
-    sortColumn: null,
+    sortColumn: null,  // 单列排序（向后兼容）
     sortDirection: 'asc',
-    filters: [],
+    sortColumns: [],   // 多列排序 [{column: 'col1', direction: 'asc'}, {column: 'col2', direction: 'desc'}]
+    filters: [], // 存储多个筛选条件
+    activeFilters: [], // 当前激活的筛选条件
     quickFilter: '',
     filteredData: [],
     selectedRows: new Set(),
@@ -26,28 +28,15 @@ export let state = {
  */
 export const MAX_CELL_LENGTH = 100; // 单元格内容显示的最大长度
 
-// 缓存vscode api
-let vscodeApi = null;
-
 /**
- * 获取vscode api
- * @returns {any} vscode api实例
+ * 获取VSCode API
+ * @returns {Object} VSCode API
  */
 export function getVsCodeApi() {
-    if (!vscodeApi) {
-        try {
-            vscodeApi = acquireVsCodeApi();
-        } catch (error) {
-            console.error('获取VSCode API失败:', error);
-            // 创建一个模拟api用于测试
-            vscodeApi = {
-                postMessage: (msg) => {
-                    console.log('模拟发送消息到VSCode:', msg);
-                }
-            };
-        }
+    if (!window.vscodeApi) {
+        window.vscodeApi = acquireVsCodeApi();
     }
-    return vscodeApi;
+    return window.vscodeApi;
 }
 
 /**

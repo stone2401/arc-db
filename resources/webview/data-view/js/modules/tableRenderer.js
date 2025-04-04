@@ -78,35 +78,47 @@ function adjustTableLayout() {
  * 渲染表格头部
  */
 function renderTableHeader() {
-    const tableHeader = document.getElementById('table-header');
-
-    // 检查表头元素是否存在
-    if (!tableHeader) {
-        console.error('表头元素未找到');
-        return;
-    }
-
-    // 创建表头行
     const headerRow = document.createElement('tr');
+
+    console.log('准备渲染表头，当前排序状态:');
+    console.log('单列排序: 列=' + state.sortColumn + ', 方向=' + state.sortDirection);
+    console.log('多列排序:', JSON.stringify(state.sortColumns));
 
     state.columns.forEach(column => {
         const th = document.createElement('th');
         th.textContent = column;
         th.dataset.column = column;
-        // 显示列类型信息
+
+        // 设置列类型提示
         th.title = `${column} (${state.columnTypes[column] || 'unknown'})`;
 
-        // 添加排序指示器
+        // 设置排序指示器
         if (state.sortColumn === column) {
+            // 单列排序
+            console.log(`设置单列排序标记: ${column}, 方向: ${state.sortDirection}`);
             th.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        } else if (state.sortColumns && state.sortColumns.length > 0) {
+            // 多列排序
+            const sortInfo = state.sortColumns.find(sort => sort.column === column);
+            if (sortInfo) {
+                console.log(`设置多列排序标记: ${column}, 方向: ${sortInfo.direction}`);
+                th.classList.add(sortInfo.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+
+                // 添加排序序号
+                const sortIndex = state.sortColumns.findIndex(sort => sort.column === column) + 1;
+                if (sortIndex > 0) {
+                    th.dataset.sortIndex = sortIndex.toString();
+                    console.log(`设置排序序号: ${column} = ${sortIndex}`);
+                }
+            }
         }
 
         headerRow.appendChild(th);
     });
 
-    // 清空并添加表头行
-    tableHeader.innerHTML = '';
-    tableHeader.appendChild(headerRow);
+    const headerContainer = document.getElementById('table-header');
+    headerContainer.innerHTML = '';
+    headerContainer.appendChild(headerRow);
 }
 
 /**

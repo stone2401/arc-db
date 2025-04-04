@@ -67,12 +67,35 @@ export class DataViewProvider {
                     vscode.commands.executeCommand('arc-db.navigateTableData', message.page, message.pageSize);
                     break;
                 case 'sort':
-                    // Handle sorting
-                    vscode.commands.executeCommand('arc-db.sortTableData', message.column, message.direction);
+                    // Handle sorting with support for multi-column sort
+                    if (message.sortColumns && message.sortColumns.length > 0) {
+                        // 多列排序 - 使用对象格式参数
+                        console.log('Executing sortTableData with multi-column sort', message.sortColumns);
+                        vscode.commands.executeCommand('arc-db.sortTableData', {
+                            sortColumns: message.sortColumns,
+                            filters: message.filters
+                        });
+                    } else {
+                        // 单列排序
+                        console.log('Executing sortTableData with single column', message.column, message.direction);
+                        vscode.commands.executeCommand('arc-db.sortTableData', message.column, message.direction, message.filters);
+                    }
                     break;
                 case 'filter':
-                    // Handle filtering
-                    vscode.commands.executeCommand('arc-db.filterTableData', message.filters);
+                    // Handle filtering with support for sorting info
+                    if (message.sortColumns && message.sortColumns.length > 0) {
+                        // 包含多列排序信息
+                        console.log('Executing filterTableData with filters and multi-column sort', message.filters, message.sortColumns);
+                        vscode.commands.executeCommand('arc-db.filterTableData', message.filters, undefined, undefined, message.sortColumns);
+                    } else if (message.sortColumn) {
+                        // 包含单列排序信息
+                        console.log('Executing filterTableData with filters and single column sort', message.filters, message.sortColumn, message.sortDirection);
+                        vscode.commands.executeCommand('arc-db.filterTableData', message.filters, message.sortColumn, message.sortDirection);
+                    } else {
+                        // 仅筛选，无排序
+                        console.log('Executing filterTableData with filters only', message.filters);
+                        vscode.commands.executeCommand('arc-db.filterTableData', message.filters);
+                    }
                     break;
                 case 'clearFilters':
                     // Clear filters

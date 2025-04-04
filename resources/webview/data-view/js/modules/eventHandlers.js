@@ -7,8 +7,10 @@ import {
     changeSort,
     changePage,
     changePageSize,
-    applyColumnFilter,
-    clearAllFilters
+    addColumnFilter,
+    applyAllFilters,
+    clearAllFilters,
+    renderFilterList
 } from './dataOperations.js';
 
 /**
@@ -90,7 +92,11 @@ function setupTableEvents() {
     document.getElementById('table-header').addEventListener('click', (event) => {
         if (event.target.tagName === 'TH') {
             const column = event.target.dataset.column;
-            changeSort(column);
+            console.log(`表头点击: 列=${column}`);
+
+            if (column) {
+                changeSort(column);
+            }
         }
     });
 
@@ -107,15 +113,31 @@ function setupTableEvents() {
  * 设置筛选相关事件监听
  */
 function setupFilterEvents() {
-    // Filter buttons
-    document.getElementById('apply-filter').addEventListener('click', () => {
+    // 添加筛选条件按钮
+    document.getElementById('add-filter').addEventListener('click', () => {
         const column = document.getElementById('filter-column').value;
         const operator = document.getElementById('filter-operator').value;
         const value = document.getElementById('filter-value').value;
 
-        applyColumnFilter({ column, operator, value });
+        if (!column) {
+            alert('请选择一个列进行筛选');
+            return;
+        }
+
+        // 对于IS NULL和IS NOT NULL操作符，不需要值
+        if ((operator === 'IS NULL' || operator === 'IS NOT NULL') || value) {
+            addColumnFilter({ column, operator, value });
+        } else {
+            alert('请输入筛选值');
+        }
     });
 
+    // 应用所有筛选条件
+    document.getElementById('apply-filters').addEventListener('click', () => {
+        applyAllFilters();
+    });
+
+    // 清除按钮
     document.getElementById('clear-filter').addEventListener('click', () => {
         clearAllFilters();
     });
@@ -123,6 +145,24 @@ function setupFilterEvents() {
     // 快速搜索
     document.getElementById('quick-search').addEventListener('input', (event) => {
         applyQuickFilter(event.target.value);
+    });
+
+    // 操作符变更事件 - 当选择IS NULL或IS NOT NULL时禁用值输入框
+    document.getElementById('filter-operator').addEventListener('change', (event) => {
+        const valueInput = document.getElementById('filter-value');
+        const operatorValue = event.target.value;
+
+        if (operatorValue === 'IS NULL' || operatorValue === 'IS NOT NULL') {
+            valueInput.disabled = true;
+            valueInput.value = '';
+            valueInput.placeholder = '无需输入值';
+        } else if (operatorValue === 'IN' || operatorValue === 'NOT IN') {
+            valueInput.disabled = false;
+            valueInput.placeholder = '多个值以逗号分隔，例如: 值1,值2,值3';
+        } else {
+            valueInput.disabled = false;
+            valueInput.placeholder = '输入筛选值';
+        }
     });
 }
 
