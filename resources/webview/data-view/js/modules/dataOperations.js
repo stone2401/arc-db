@@ -77,12 +77,8 @@ export function changeSort(column) {
     // 检测是否按住了Shift键（多列排序）
     const isMultiSort = window.event && (window.event.shiftKey || window.event.ctrlKey);
 
-    console.log(`执行changeSort: 列=${column}, 多列排序=${isMultiSort}`);
-    console.log(`当前排序状态: 列=${state.sortColumn}, 方向=${state.sortDirection}`);
-
     // 防止重复触发
     if (window.lastSortTime && Date.now() - window.lastSortTime < 300) {
-        console.log('排序操作过于频繁，忽略此次请求');
         return;
     }
     window.lastSortTime = Date.now();
@@ -96,11 +92,9 @@ export function changeSort(column) {
         if (existingIndex >= 0) {
             // 已有此列，切换方向
             const currentDirection = state.sortColumns[existingIndex].direction;
-            console.log(`多列排序: 切换列 ${column} 的方向，从 ${currentDirection} 到 ${currentDirection === 'asc' ? 'desc' : 'asc'}`);
             state.sortColumns[existingIndex].direction = currentDirection === 'asc' ? 'desc' : 'asc';
         } else {
             // 添加新的排序列
-            console.log(`多列排序: 添加新列 ${column} 为升序`);
             state.sortColumns.push({
                 column: column,
                 direction: 'asc'
@@ -119,17 +113,13 @@ export function changeSort(column) {
         if (state.sortColumn === column) {
             // 这里是切换排序方向的核心逻辑
             const newDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
-            console.log(`单列排序: 相同列 ${column}，切换方向从 ${state.sortDirection} 到 ${newDirection}`);
             state.sortDirection = newDirection;
         } else {
             // 点击新列时，默认使用升序
-            console.log(`单列排序: 新列 ${column}，设置为默认升序`);
             state.sortColumn = column;
             state.sortDirection = 'asc';
         }
     }
-
-    console.log(`排序后状态: 列=${state.sortColumn}, 方向=${state.sortDirection}, 多列=${JSON.stringify(state.sortColumns)}`);
 
     // 对于本地数据，执行本地排序并重新渲染
     sortDataByCurrentSettings();
@@ -139,7 +129,6 @@ export function changeSort(column) {
         // 同时向服务端发送排序请求
         if (state.sortColumns && state.sortColumns.length > 0) {
             // 多列排序 - 改用sort命令而非filterTableData
-            console.log(`使用sort命令发送多列排序请求: ${JSON.stringify(state.sortColumns)}`);
             getVsCodeApi().postMessage({
                 command: 'sort',
                 sortColumns: state.sortColumns,  // 使用sortColumns作为参数名
@@ -147,7 +136,6 @@ export function changeSort(column) {
             });
         } else if (state.sortColumn) {
             // 单列排序
-            console.log(`发送单列排序请求: 列=${state.sortColumn}, 方向=${state.sortDirection}`);
             getVsCodeApi().postMessage({
                 command: 'sort',
                 column: state.sortColumn,

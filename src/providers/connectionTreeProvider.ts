@@ -104,7 +104,6 @@ export class ConnectionTreeProvider implements vscode.TreeDataProvider<Connectio
       await this.databaseService.refreshMetadata(connectionId);
       this.refresh();
     } catch (error) {
-      console.error('Error refreshing connection:', error);
       vscode.window.showErrorMessage(`刷新连接失败: ${error}`);
     }
   }

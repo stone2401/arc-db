@@ -80,7 +80,7 @@
                 </tbody>
             </table>
             <div class="copy-hint" id="copy-hint">已复制到剪贴板</div>
-            <div id="content-tooltip" class="content-tooltip"></div>
+            <div id="content-tooltip" class="content-tooltip" style="display:none;"></div>
             <div id="scroll-hint" class="scroll-hint">← 左右滑动查看更多 →</div>
         </div>
 
@@ -115,7 +115,6 @@
 
             if (message.command === 'updateData') {
                 // 更新数据消息由eventHandlers.js中的setupVSCodeMessageEvents处理
-                console.log('收到数据更新消息');
             }
         });
     </script>

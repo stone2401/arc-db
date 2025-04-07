@@ -157,10 +157,6 @@
         const initialData = TEMPLATE_INITIAL_DATA;
         const initialConnection = initialData.initialConnection || {};
         const isEditMode = initialData.isEditMode || false;
-
-        console.log('Script loaded');
-        console.log('Initial data:', initialData);
-
         // DOM elements
         const form = document.getElementById('connectionForm');
         const typeSelect = document.getElementById('type');
@@ -170,18 +166,6 @@
         const testButton = document.getElementById('testButton');
         const saveButton = document.getElementById('saveButton');
         const cancelButton = document.getElementById('cancelButton');
-
-        console.log('DOM elements:', {
-            form: !!form,
-            typeSelect: !!typeSelect,
-            standardFields: !!standardFields,
-            sqliteFields: !!sqliteFields,
-            statusMessage: !!statusMessage,
-            testButton: !!testButton,
-            saveButton: !!saveButton,
-            cancelButton: !!cancelButton
-        });
-
         // Initialize form values
         document.getElementById('name').value = initialConnection.name || '';
         typeSelect.value = initialConnection.type || 'mysql';
@@ -252,7 +236,6 @@
 
         // Event listeners
         typeSelect.addEventListener('change', toggleFields);
-        console.log('Added change event listener to typeSelect');
 
         // Initialize fields based on type
         if (initialConnection.id === undefined) {
@@ -261,39 +244,31 @@
 
         // Test connection
         testButton.addEventListener('click', () => {
-            console.log('Test button clicked');
             const connection = getFormData();
             testButton.disabled = true;
             testButton.textContent = 'Testing...';
-            console.log(connection);
             vscode.postMessage({
                 command: 'testConnection',
                 connection: connection
             });
         });
-        console.log('Added click event listener to testButton');
 
         // Save connection
         form.addEventListener('submit', (e) => {
-            console.log('Form submitted');
             e.preventDefault();
             const connection = getFormData();
-            console.log(connection);
             vscode.postMessage({
                 command: 'saveConnection',
                 connection: connection
             });
         });
-        console.log('Added submit event listener to form');
 
         // Cancel
         cancelButton.addEventListener('click', () => {
-            console.log('Cancel button clicked');
             vscode.postMessage({
                 command: 'cancel'
             });
         });
-        console.log('Added click event listener to cancelButton');
 
         // Handle messages from extension
         window.addEventListener('message', (event) => {

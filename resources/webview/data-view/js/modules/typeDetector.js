@@ -70,8 +70,6 @@ export function detectColumnTypes() {
         // 默认为字符串类型
         state.columnTypes[column] = 'string';
     });
-
-    console.log('检测到的列类型:', state.columnTypes);
 }
 
 /**

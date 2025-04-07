@@ -92,8 +92,6 @@ function setupTableEvents() {
     document.getElementById('table-header').addEventListener('click', (event) => {
         if (event.target.tagName === 'TH') {
             const column = event.target.dataset.column;
-            console.log(`表头点击: 列=${column}`);
-
             if (column) {
                 changeSort(column);
             }
@@ -246,16 +244,29 @@ function setupVSCodeMessageEvents() {
  */
 function handleDataUpdate(message) {
     // Update the state with new data
-    if (message.data && message.data.data) {
-        state.data = message.data.data;
+    if (message.data) {
+        // 更新数据
+        state.data = message.data.data || [];
         state.filteredData = [...state.data];
         state.totalPages = Math.ceil(state.data.length / state.pageSize) || 1;
         state.currentPage = 1;
         state.selectedRows.clear();
 
+        // 如果收到了列信息，也更新列信息
+        if (message.data.columns && message.data.columns.length > 0) {
+            state.columns = message.data.columns;
+        }
+
+        // 确保内容提示工具被隐藏
+        const contentTooltip = document.getElementById('content-tooltip');
+        if (contentTooltip) {
+            contentTooltip.style.display = 'none';
+        }
+
         // 重新推断列类型
         detectColumnTypes();
 
+        // 渲染表格（即使没有数据也会渲染表头）
         renderTable();
     }
 }

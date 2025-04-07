@@ -6,7 +6,7 @@ import { showCellContent, copyToClipboard, showCopyHint } from './uiHelpers.js';
  * 渲染表格
  */
 export function renderTable() {
-    // Render table headers
+    // Render table headers - 始终渲染表头，不管数据是否为空
     renderTableHeader();
 
     // Render table body
@@ -55,10 +55,10 @@ function adjustTableLayout() {
             scrollHint.classList.remove('visible');
         }
     } else {
-        // 当数据行少时，可以适应容器宽度
+        // 当数据行少或没有数据时，可以适应容器宽度
         table.style.width = '100%';
 
-        // 调整列宽度平均分布
+        // 调整列宽度平均分布 - 即使没有数据也调整表头
         if (state.columns.length > 0) {
             const ths = document.querySelectorAll('#table-header th');
             const columnWidth = `${Math.floor(100 / state.columns.length)}%`;
@@ -79,10 +79,11 @@ function adjustTableLayout() {
  */
 function renderTableHeader() {
     const headerRow = document.createElement('tr');
-
-    console.log('准备渲染表头，当前排序状态:');
-    console.log('单列排序: 列=' + state.sortColumn + ', 方向=' + state.sortDirection);
-    console.log('多列排序:', JSON.stringify(state.sortColumns));
+    // 检查列是否存在
+    if (!state.columns || state.columns.length === 0) {
+        console.warn('没有列信息可渲染表头');
+        return;
+    }
 
     state.columns.forEach(column => {
         const th = document.createElement('th');
@@ -95,20 +96,17 @@ function renderTableHeader() {
         // 设置排序指示器
         if (state.sortColumn === column) {
             // 单列排序
-            console.log(`设置单列排序标记: ${column}, 方向: ${state.sortDirection}`);
             th.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
         } else if (state.sortColumns && state.sortColumns.length > 0) {
             // 多列排序
             const sortInfo = state.sortColumns.find(sort => sort.column === column);
             if (sortInfo) {
-                console.log(`设置多列排序标记: ${column}, 方向: ${sortInfo.direction}`);
                 th.classList.add(sortInfo.direction === 'asc' ? 'sort-asc' : 'sort-desc');
 
                 // 添加排序序号
                 const sortIndex = state.sortColumns.findIndex(sort => sort.column === column) + 1;
                 if (sortIndex > 0) {
                     th.dataset.sortIndex = sortIndex.toString();
-                    console.log(`设置排序序号: ${column} = ${sortIndex}`);
                 }
             }
         }
@@ -117,6 +115,11 @@ function renderTableHeader() {
     });
 
     const headerContainer = document.getElementById('table-header');
+    if (!headerContainer) {
+        console.error('表头容器元素未找到');
+        return;
+    }
+
     headerContainer.innerHTML = '';
     headerContainer.appendChild(headerRow);
 }
@@ -129,7 +132,6 @@ function renderTableBody() {
 
     // 检查表体元素是否存在
     if (!tableBody) {
-        console.error('表体元素未找到');
         return;
     }
 
@@ -176,6 +178,7 @@ function renderTableBody() {
 
 /**
  * 渲染空表格提示
+ * 注意：这个函数只处理表格内容部分(tbody)，不影响表头(thead)的渲染
  */
 function renderEmptyTable() {
     const tableBody = document.getElementById('table-body');

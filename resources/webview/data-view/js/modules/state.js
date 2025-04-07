@@ -65,7 +65,6 @@ export function initializeState(data) {
         if (typeof window.__initialData === 'string') {
             try {
                 initialData = JSON.parse(window.__initialData);
-                console.log('从字符串解析的初始数据:', initialData);
             } catch (error) {
                 console.error('解析初始数据失败:', error);
                 initialData = { columns: [], data: [] };
@@ -84,8 +83,6 @@ export function initializeState(data) {
         state.currentPage = initialData.currentPage || 1;
         state.totalPages = Math.ceil(state.data.length / state.pageSize) || 1;
     }
-
-    console.log('初始化状态完成', state);
 }
 
 // 存储原始数据

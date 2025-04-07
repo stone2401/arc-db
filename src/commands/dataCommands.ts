@@ -118,12 +118,28 @@ export function registerDataCommands(
           return;
         }
 
+        // 获取表结构以获取列信息
+        const structure = await databaseService.getTableStructure(
+          currentTableView.connectionId,
+          currentTableView.databaseName,
+          currentTableView.tableName
+        );
+
+        // 从结构中提取列名
+        const columns = structure.columns.map(col => col.name);
+
         // Execute query with current pagination and sorting
         const sql = buildTableQuery(currentTableView);
         const result = await databaseService.executeQuery(currentTableView.connectionId, sql);
 
-        // Update the data view
-        dataViewProvider.updateTableData(result.rows);
+        // Update the data view with columns information
+        dataViewProvider.updateTableData(
+          result.rows,
+          currentTableView.connectionName,
+          currentTableView.databaseName,
+          currentTableView.tableName,
+          columns  // 传递列信息
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to refresh table data: ${error}`);
       }
@@ -148,12 +164,28 @@ export function registerDataCommands(
           return;
         }
 
+        // 获取表结构以获取列信息
+        const structure = await databaseService.getTableStructure(
+          currentTableView.connectionId,
+          currentTableView.databaseName,
+          currentTableView.tableName
+        );
+
+        // 从结构中提取列名
+        const columns = structure.columns.map(col => col.name);
+
         // Execute query with updated pagination
         const sql = buildTableQuery(currentTableView);
         const result = await databaseService.executeQuery(currentTableView.connectionId, sql);
 
-        // Update the data view
-        dataViewProvider.updateTableData(result.rows);
+        // Update the data view with columns information
+        dataViewProvider.updateTableData(
+          result.rows,
+          currentTableView.connectionName,
+          currentTableView.databaseName,
+          currentTableView.tableName,
+          columns  // 传递列信息
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to navigate table data: ${error}`);
       }
@@ -166,23 +198,19 @@ export function registerDataCommands(
       }
 
       try {
-        console.log('接收到排序请求:', JSON.stringify({ columnOrRequest, direction, filters }));
 
         // 检查请求类型，支持新的对象格式
         if (typeof columnOrRequest === 'object') {
           // 对象形式的请求
           const request = columnOrRequest;
-          console.log('处理对象形式的排序请求:', JSON.stringify(request));
 
           // 处理多列排序
           if (request.sortColumns && request.sortColumns.length > 0) {
-            console.log('应用多列排序:', JSON.stringify(request.sortColumns));
             currentTableView.sortColumns = request.sortColumns;
             currentTableView.sortColumn = undefined; // 清除单列排序
           }
           // 处理单列排序
           else if (request.sortColumn) {
-            console.log('应用单列排序:', request.sortColumn, request.sortDirection);
             currentTableView.sortColumn = request.sortColumn;
             currentTableView.sortDirection = request.sortDirection || 'asc';
             currentTableView.sortColumns = []; // 清除多列排序
@@ -196,7 +224,6 @@ export function registerDataCommands(
         // 兼容旧的API
         else {
           // 单列排序
-          console.log('应用传统单列排序:', columnOrRequest, direction);
           currentTableView.sortColumn = columnOrRequest;
           currentTableView.sortDirection = direction || 'asc';
           currentTableView.sortColumns = []; // 清除多列排序
@@ -207,31 +234,36 @@ export function registerDataCommands(
           }
         }
 
-        // 显示当前排序状态
-        console.log('排序设置已更新, 当前状态:',
-          JSON.stringify({
-            sortColumn: currentTableView.sortColumn,
-            sortDirection: currentTableView.sortDirection,
-            sortColumns: currentTableView.sortColumns
-          })
-        );
-
         // Ensure the connection is established
         if (!databaseService.isConnected(currentTableView.connectionId)) {
           vscode.window.showErrorMessage('Database connection lost. Please reconnect.');
           return;
         }
 
+        // 获取表结构以获取列信息
+        const structure = await databaseService.getTableStructure(
+          currentTableView.connectionId,
+          currentTableView.databaseName,
+          currentTableView.tableName
+        );
+
+        // 从结构中提取列名
+        const columns = structure.columns.map(col => col.name);
+
         // Execute query with updated sorting
         const sql = buildTableQuery(currentTableView);
-        console.log('执行SQL查询:', sql);
         const result = await databaseService.executeQuery(currentTableView.connectionId, sql);
 
-        // Update the data view
-        dataViewProvider.updateTableData(result.rows);
+        // Update the data view with columns information
+        dataViewProvider.updateTableData(
+          result.rows,
+          currentTableView.connectionName,
+          currentTableView.databaseName,
+          currentTableView.tableName,
+          columns  // 传递列信息
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to sort table data: ${error}`);
-        console.error('排序出错:', error);
       }
     }),
 
@@ -257,7 +289,7 @@ export function registerDataCommands(
           currentTableView.sortColumns = []; // 清除多列排序
         }
 
-        // Reset to first page when applying filters
+        // 应用筛选后重置为第一页
         currentTableView.page = 1;
 
         // Ensure the connection is established
@@ -266,12 +298,28 @@ export function registerDataCommands(
           return;
         }
 
+        // 获取表结构以获取列信息
+        const structure = await databaseService.getTableStructure(
+          currentTableView.connectionId,
+          currentTableView.databaseName,
+          currentTableView.tableName
+        );
+
+        // 从结构中提取列名
+        const columns = structure.columns.map(col => col.name);
+
         // Execute query with updated filters
         const sql = buildTableQuery(currentTableView);
         const result = await databaseService.executeQuery(currentTableView.connectionId, sql);
 
-        // Update the data view
-        dataViewProvider.updateTableData(result.rows);
+        // Update the data view with columns information
+        dataViewProvider.updateTableData(
+          result.rows,
+          currentTableView.connectionName,
+          currentTableView.databaseName,
+          currentTableView.tableName,
+          columns  // 传递列信息
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to filter table data: ${error}`);
       }
@@ -284,9 +332,9 @@ export function registerDataCommands(
       }
 
       try {
-        // Clear filters in current view state
+        // Clear filters
         currentTableView.filters = undefined;
-        // Reset to first page when clearing filters
+        // Reset to first page
         currentTableView.page = 1;
 
         // Ensure the connection is established
@@ -295,12 +343,28 @@ export function registerDataCommands(
           return;
         }
 
-        // Execute query without filters
+        // 获取表结构以获取列信息
+        const structure = await databaseService.getTableStructure(
+          currentTableView.connectionId,
+          currentTableView.databaseName,
+          currentTableView.tableName
+        );
+
+        // 从结构中提取列名
+        const columns = structure.columns.map(col => col.name);
+
+        // Execute query with no filters
         const sql = buildTableQuery(currentTableView);
         const result = await databaseService.executeQuery(currentTableView.connectionId, sql);
 
-        // Update the data view
-        dataViewProvider.updateTableData(result.rows);
+        // Update the data view with columns information
+        dataViewProvider.updateTableData(
+          result.rows,
+          currentTableView.connectionName,
+          currentTableView.databaseName,
+          currentTableView.tableName,
+          columns  // 传递列信息
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to clear filters: ${error}`);
       }
@@ -308,7 +372,7 @@ export function registerDataCommands(
 
     vscode.commands.registerCommand('arc-db.executeCustomQuery', async (query: string) => {
       if (!currentTableView) {
-        vscode.window.showErrorMessage('No active table view to execute custom query.');
+        vscode.window.showErrorMessage('No active connection to execute query.');
         return;
       }
 
@@ -319,13 +383,27 @@ export function registerDataCommands(
           return;
         }
 
-        // Execute the custom query
+        // 获取表结构以获取列信息
+        const structure = await databaseService.getTableStructure(
+          currentTableView.connectionId,
+          currentTableView.databaseName,
+          currentTableView.tableName
+        );
+
+        // 从结构中提取列名
+        const columns = structure.columns.map(col => col.name);
+
+        // Execute custom query
         const result = await databaseService.executeQuery(currentTableView.connectionId, query);
 
-        // Update the data view with the query results
-        dataViewProvider.updateTableData(result.rows);
-
-        vscode.window.showInformationMessage(`Query executed successfully. ${result.rows.length} rows returned.`);
+        // Update the data view with columns information
+        dataViewProvider.updateTableData(
+          result.rows,
+          currentTableView.connectionName,
+          currentTableView.databaseName,
+          currentTableView.tableName,
+          columns  // 传递列信息
+        );
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to execute query: ${error}`);
       }

@@ -111,7 +111,6 @@ export class ConnectionFormProvider {
       initialConnection,
       isEditMode: !!connection
     };
-    console.log(initData);
 
     // Replace template variables in the HTML
     html = html.replace('{{title}}', connection ? 'Edit Connection' : 'Add Connection')

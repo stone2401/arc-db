@@ -10,20 +10,15 @@ import { detectColumnTypes } from './typeDetector.js';
  * 3. 发送初始化消息到VSCode扩展
  */
 export function initializeApplication() {
-    console.log('开始初始化应用...');
-
     try {
         // 初始化全局状态
         initializeState();
-        console.log('状态初始化完成');
 
         // 设置所有事件监听器
         setupEventListeners();
-        console.log('事件监听器设置完成');
 
         // 向VSCode发送准备就绪消息
         sendReadyMessage();
-        console.log('已发送准备就绪消息');
 
         // 检查DOMContentLoaded事件是否已触发
         if (document.readyState === 'loading') {
@@ -83,15 +78,20 @@ function onDomContentLoaded() {
         document.title = `Table: ${state.tableName}`;
     }
 
+    // 确保内容提示工具始终隐藏，直到需要显示时
+    const contentTooltip = document.getElementById('content-tooltip');
+    if (contentTooltip) {
+        contentTooltip.style.display = 'none';
+    }
+
     // 初始化UI元素
     initializeUIElements();
 
-    // 如果已有数据，立即处理
-    if (state.data && state.data.length > 0) {
-        console.log(`处理初始数据，共 ${state.data.length} 行`);
+    // 修改逻辑：如果有数据或者有列定义，都处理初始数据
+    if ((state.data && state.data.length > 0) || (state.columns && state.columns.length > 0)) {
         processInitialData();
     } else {
-        console.warn('没有初始数据可处理');
+        console.warn('没有初始数据或列定义可处理');
     }
 }
 
@@ -175,7 +175,7 @@ function processInitialData() {
     // 设置列筛选下拉框
     updateFilterColumns();
 
-    // 渲染表格
+    // 渲染表格 - 即使没有数据也会渲染表头
     renderTable();
 }
 

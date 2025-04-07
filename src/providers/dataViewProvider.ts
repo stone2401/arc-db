@@ -4,11 +4,13 @@ import * as fs from 'fs';
 
 export class DataViewProvider {
     private static instance: DataViewProvider;
-    private panel: vscode.WebviewPanel | undefined;
+    // 修改为存储多个面板的映射，键为表名
+    private panels: Map<string, vscode.WebviewPanel>;
     private context: vscode.ExtensionContext;
 
     private constructor(context: vscode.ExtensionContext) {
         this.context = context;
+        this.panels = new Map();
     }
 
     public static getInstance(context?: vscode.ExtensionContext): DataViewProvider {
@@ -16,6 +18,11 @@ export class DataViewProvider {
             DataViewProvider.instance = new DataViewProvider(context);
         }
         return DataViewProvider.instance;
+    }
+
+    // 生成唯一的面板ID
+    private getPanelId(connectionName: string, databaseName: string, tableName: string): string {
+        return `${connectionName}:${databaseName}:${tableName}`;
     }
 
     public showTableData(
@@ -27,12 +34,19 @@ export class DataViewProvider {
         primaryKey: string | string[] | null = null
     ): void {
         const title = `${connectionName}: ${tableName}`;
+        const panelId = this.getPanelId(connectionName, databaseName, tableName);
 
-        if (this.panel) {
-            this.panel.dispose();
+        // 检查是否已存在此表的面板
+        const existingPanel = this.panels.get(panelId);
+
+        if (existingPanel) {
+            // 如果已存在，则显示该面板
+            existingPanel.reveal();
+            return;
         }
 
-        this.panel = vscode.window.createWebviewPanel(
+        // 创建新的面板
+        const panel = vscode.window.createWebviewPanel(
             'arcDbTableView',
             title,
             vscode.ViewColumn.One,
@@ -45,16 +59,18 @@ export class DataViewProvider {
             }
         );
 
-        this.panel.webview.html = this.getWebviewContent(tableName, columns, data, connectionName, databaseName, primaryKey);
+        // 存储面板
+        this.panels.set(panelId, panel);
 
-        this.panel.onDidDispose(() => {
-            this.panel = undefined;
+        panel.webview.html = this.getWebviewContent(tableName, columns, data, connectionName, databaseName, primaryKey);
+
+        panel.onDidDispose(() => {
+            // 面板关闭时从映射中移除
+            this.panels.delete(panelId);
         });
 
         // Handle messages from the webview
-        this.panel.webview.onDidReceiveMessage(async (message) => {
-            console.log('Received message from webview:', message);
-
+        panel.webview.onDidReceiveMessage(async (message) => {
             switch (message.command) {
                 case 'refresh':
                     vscode.commands.executeCommand('arc-db.refreshTableData', message.page, message.pageSize, message.sortColumn, message.sortDirection, message.filters);
@@ -70,14 +86,12 @@ export class DataViewProvider {
                     // Handle sorting with support for multi-column sort
                     if (message.sortColumns && message.sortColumns.length > 0) {
                         // 多列排序 - 使用对象格式参数
-                        console.log('Executing sortTableData with multi-column sort', message.sortColumns);
                         vscode.commands.executeCommand('arc-db.sortTableData', {
                             sortColumns: message.sortColumns,
                             filters: message.filters
                         });
                     } else {
                         // 单列排序
-                        console.log('Executing sortTableData with single column', message.column, message.direction);
                         vscode.commands.executeCommand('arc-db.sortTableData', message.column, message.direction, message.filters);
                     }
                     break;
@@ -85,15 +99,12 @@ export class DataViewProvider {
                     // Handle filtering with support for sorting info
                     if (message.sortColumns && message.sortColumns.length > 0) {
                         // 包含多列排序信息
-                        console.log('Executing filterTableData with filters and multi-column sort', message.filters, message.sortColumns);
                         vscode.commands.executeCommand('arc-db.filterTableData', message.filters, undefined, undefined, message.sortColumns);
                     } else if (message.sortColumn) {
                         // 包含单列排序信息
-                        console.log('Executing filterTableData with filters and single column sort', message.filters, message.sortColumn, message.sortDirection);
                         vscode.commands.executeCommand('arc-db.filterTableData', message.filters, message.sortColumn, message.sortDirection);
                     } else {
                         // 仅筛选，无排序
-                        console.log('Executing filterTableData with filters only', message.filters);
                         vscode.commands.executeCommand('arc-db.filterTableData', message.filters);
                     }
                     break;
@@ -133,11 +144,18 @@ export class DataViewProvider {
         const htmlPath = path.join(this.context.extensionPath, 'resources', 'webview', 'data-view', 'index.html');
 
         // 获取CSS和JS文件的URI
-        const cssUri = this.panel!.webview.asWebviewUri(
+        const panelId = this.getPanelId(connectionName, databaseName, tableName);
+        const panel = this.panels.get(panelId);
+
+        if (!panel) {
+            throw new Error(`Panel not found for ${panelId}`);
+        }
+
+        const cssUri = panel.webview.asWebviewUri(
             vscode.Uri.file(path.join(this.context.extensionPath, 'resources', 'webview', 'data-view', 'css', 'styles.css'))
         );
 
-        const jsUri = this.panel!.webview.asWebviewUri(
+        const jsUri = panel.webview.asWebviewUri(
             vscode.Uri.file(path.join(this.context.extensionPath, 'resources', 'webview', 'data-view', 'js', 'main.js'))
         );
 
@@ -166,7 +184,7 @@ export class DataViewProvider {
             .replace(/{{connectionName}}/g, connectionName)
             .replace(/{{databaseName}}/g, databaseName || tableName.split('.')[0] || '')
             .replace(/{{rowCount}}/g, data.length.toString())
-            .replace(/{{cspSource}}/g, this.panel?.webview.cspSource || '')
+            .replace(/{{cspSource}}/g, panel.webview.cspSource || '')
             .replace(/{{cssPath}}/g, cssUri.toString())
             .replace(/{{jsPath}}/g, jsUri.toString())
             .replace('DATA_PLACEHOLDER', dataString);
@@ -174,14 +192,18 @@ export class DataViewProvider {
         return html;
     }
 
-    public updateTableData(data: any[]): void {
-        if (this.panel) {
-            console.log('Updating table data with', data.length, 'rows');
-            // Send updated data to the webview
-            this.panel.webview.postMessage({
+    public updateTableData(data: any[], connectionName: string, databaseName: string, tableName: string, columns?: string[]): void {
+        // 使用传入的参数确定需要更新的面板
+        const panelId = this.getPanelId(connectionName, databaseName, tableName);
+        const panel = this.panels.get(panelId);
+
+        if (panel) {
+            // 发送更新数据到webview，包含列信息以确保空数据时能正确渲染表头
+            panel.webview.postMessage({
                 command: 'updateData',
                 data: {
                     data,
+                    columns: columns, // 发送列信息
                     rowCount: data.length,
                     totalRowCount: data.length
                 }
