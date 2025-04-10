@@ -231,23 +231,6 @@ export function changePageSize(pageSize) {
 }
 
 /**
- * 应用列筛选
- * @param {Object} filterConfig - 筛选配置
- */
-export function applyColumnFilter(filterConfig) {
-    if (!filterConfig.column) return;
-
-    // 添加到筛选列表
-    state.filters.push(filterConfig);
-
-    // 发送消息到VSCode
-    getVsCodeApi().postMessage({
-        command: 'filter',
-        filters: state.filters
-    });
-}
-
-/**
  * 添加列筛选条件
  * @param {Object} filterConfig - 筛选配置
  */
