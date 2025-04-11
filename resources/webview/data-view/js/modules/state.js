@@ -84,14 +84,3 @@ export function initializeState(data) {
         state.totalPages = Math.ceil(state.data.length / state.pageSize) || 1;
     }
 }
-
-// 存储原始数据
-let tableData = {};
-
-/**
- * 获取原始数据
- * @returns {Object} 原始表格数据
- */
-export function getTableData() {
-    return tableData;
-} 
